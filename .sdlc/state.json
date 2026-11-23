@@ -1,4 +1,27 @@
 {
   "schema_version": 1,
-  "features": {}
+  "features": {
+    "framework-improvements": {
+      "phase": "design",
+      "gates": {
+        "design": "approved"
+      },
+      "artifacts": [],
+      "open_questions": [],
+      "notes": [
+        {
+          "at": "2026-11-23T15:07:11Z",
+          "by": "antigravity",
+          "text": "Completed Phase 1 foundations"
+        }
+      ],
+      "updated_by": "antigravity",
+      "updated_at": "2026-11-23T15:07:11Z",
+      "next_action": "Implement Phase 2"
+    }
+  },
+  "updated_by": "antigravity",
+  "updated_at": "2026-11-23T15:07:11Z",
+  "repo_sha": "64f8c42",
+  "repo_dirty": true
 }

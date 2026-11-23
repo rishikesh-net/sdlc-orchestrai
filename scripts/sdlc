@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+# POSIX shell wrapper for sdlc.py
+DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if command -v python3 >/dev/null 2>&1; then
+    exec python3 "$DIR/sdlc.py" "$@"
+elif command -v python >/dev/null 2>&1; then
+    exec python "$DIR/sdlc.py" "$@"
+else
+    echo "ERROR: python3 or python is required to run sdlc" >&2
+    exit 1
+fi

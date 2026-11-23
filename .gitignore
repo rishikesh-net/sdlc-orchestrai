@@ -3,3 +3,10 @@
 node_modules/
 bin/
 obj/
+
+# Auto-generated client skills (generated locally via sdlc sync-skills)
+.agent/
+.claude/
+.cursor/
+.github/skills/
+.opencode/
