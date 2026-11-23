@@ -1,0 +1,8 @@
+# SDLCOrchestrAI tracker configuration
+tracker: github
+
+github:
+  repo: your-org/your-repo        # owner/name  (override with env SDLC_REPO)
+  project_number: ""              # optional GitHub Projects (v2) number; empty = skip
+  project_owner: ""               # optional; defaults to the repo owner
+  # Labels are created automatically (gh label create --force)

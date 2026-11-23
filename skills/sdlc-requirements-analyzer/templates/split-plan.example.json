@@ -1,0 +1,34 @@
+{
+  "feature": "notification-platform",
+  "title": "Notification platform",
+  "source": "docs/requirements/_incoming/notification-platform-requirements.md",
+  "id_policy": "renumber",
+  "id_regex": "(FR|NFR)-[0-9]+",
+  "slices": [
+    {
+      "slug": "preferences",
+      "title": "Notification preferences",
+      "prefix": "PREF",
+      "summary": "Customers choose which notifications they receive",
+      "priority": "Must",
+      "depends_on": [],
+      "ranges": [[60, 140]]
+    },
+    {
+      "slug": "unsubscribe",
+      "title": "Unsubscribe and consent",
+      "prefix": "UNSUB",
+      "summary": "One-click unsubscribe and consent records",
+      "priority": "Must",
+      "depends_on": ["preferences"],
+      "ranges": [[141, 200], [310, 330]]
+    }
+  ],
+  "cross_cutting": {
+    "overview": { "ranges": [[1, 30]] },
+    "glossary": { "ranges": [[31, 45]] },
+    "nfr": { "prefix": "GEN", "ranges": [[240, 309]] }
+  },
+  "skip": [[46, 59]],
+  "skip_reason": "Table of contents and revision history"
+}

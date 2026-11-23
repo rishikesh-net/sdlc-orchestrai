@@ -1,0 +1,33 @@
+name: skills-sync-check
+on:
+  pull_request:
+    paths:
+      - "skills/**"
+      - ".claude/**"
+      - ".github/skills/**"
+      - ".opencode/**"
+      - ".agent/**"
+      - ".cursor/**"
+      - ".sdlc/**"
+      - "docs/requirements/**"
+      - "scripts/sync-skills.sh"
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Client copies match skills/
+        run: bash scripts/sync-skills.sh --check
+      - name: Shared memory is well-formed
+        run: |
+          bash skills/sdlc-session-handoff/scripts/sdlc-state.sh validate
+          bash skills/sdlc-session-handoff/scripts/sdlc-graph.sh validate
+      - name: Requirements packs are well-formed
+        run: |
+          shopt -s nullglob
+          for pack in docs/requirements/*/pack.json; do
+            feature="$(basename "$(dirname "$pack")")"
+            bash skills/sdlc-requirements-analyzer/scripts/req-index.sh validate --feature "$feature"
+          done

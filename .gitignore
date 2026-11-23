@@ -1,0 +1,5 @@
+.sdlc/reports/*
+!.sdlc/reports/.gitkeep
+node_modules/
+bin/
+obj/

@@ -1,0 +1,33 @@
+{
+  "$comment": "Schema for ONE line of .sdlc/memory/graph.jsonl",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SDLCOrchestrAI graph line",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["type", "id", "kind"],
+      "properties": {
+        "type": { "const": "entity" },
+        "id": { "type": "string" },
+        "kind": { "enum": ["feature", "slice", "requirement", "nfr", "design_section", "adr", "epic", "story", "task", "spike", "issue", "pr", "threat", "control", "finding"] },
+        "title": { "type": "string" },
+        "source": { "type": "string" },
+        "severity": { "enum": ["info", "low", "medium", "high", "critical"] },
+        "status": { "type": "string" },
+        "issue": { "type": "number" },
+        "pr": { "type": "number" }
+      },
+      "additionalProperties": true
+    },
+    {
+      "type": "object",
+      "required": ["type", "from", "rel", "to"],
+      "properties": {
+        "type": { "const": "relation" },
+        "from": { "type": "string" },
+        "rel": { "enum": ["implements", "covers", "depends_on", "blocks", "part_of", "mitigated_by", "closes", "derived_from", "tracked_by", "found_in", "relates_to"] },
+        "to": { "type": "string" }
+      }
+    }
+  ]
+}

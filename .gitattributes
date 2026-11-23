@@ -1,0 +1,2 @@
+# Union-merge the append-friendly graph; run `sdlc-graph.sh normalize` and `validate` after merging.
+.sdlc/memory/graph.jsonl merge=union

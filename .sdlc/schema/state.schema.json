@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SDLCOrchestrAI shared state",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "features"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "updated_by": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string"
+    },
+    "repo_sha": {
+      "type": "string"
+    },
+    "repo_dirty": {
+      "type": "boolean"
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "phase": {
+            "enum": [
+              "requirements",
+              "design",
+              "threat-model",
+              "backlog",
+              "issues",
+              "build",
+              "security-review",
+              "done"
+            ]
+          },
+          "gates": {
+            "type": "object",
+            "additionalProperties": {
+              "enum": [
+                "pending",
+                "in-review",
+                "approved",
+                "skipped"
+              ]
+            }
+          },
+          "next_action": {
+            "type": "string"
+          },
+          "branch": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "open_questions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "at",
+                "by",
+                "text"
+              ],
+              "properties": {
+                "at": {
+                  "type": "string"
+                },
+                "by": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "updated_by": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "slice_hashes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

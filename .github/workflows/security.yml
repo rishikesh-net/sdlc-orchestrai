@@ -1,0 +1,63 @@
+# Security backstop: the same classes of checks the sdlc-security-review skill uses, enforced in CI.
+# Adjust: .NET version, working directories, and whether to block merges (branch protection).
+# Pin third-party actions to commit SHAs for stricter supply-chain security.
+name: security
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * 1"   # weekly
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}   # required for some org plans
+
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x          # TODO: set to your project's SDK version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20               # TODO: set to your frontend's Node version
+      - name: Vulnerable dependencies (NuGet + npm)
+        run: SDLC_STRICT=1 bash skills/sdlc-security-review/scripts/scan-deps.sh
+
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [csharp, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v4
+      - if: matrix.language == 'csharp'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x          # TODO: set to your project's SDK version
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+      - uses: github/codeql-action/autobuild@v3
+        if: matrix.language == 'csharp'
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

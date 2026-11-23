@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "feature": "notification-preferences",
+  "source_docs": [
+    "docs/requirements/notification-preferences.md",
+    "docs/design/notification-preferences.md"
+  ],
+  "items": [
+    {
+      "id": "E1",
+      "type": "epic",
+      "title": "Notification preferences",
+      "body_markdown": "Let customers control which notifications they receive.",
+      "priority": "P1",
+      "labels": ["feature:notification-preferences"],
+      "req_refs": ["REQ-001", "REQ-002", "NFR-001"]
+    },
+    {
+      "id": "E1-S1",
+      "type": "story",
+      "parent": "E1",
+      "title": "Customer can view and save notification preferences",
+      "user_story": "As a customer, I want to choose which emails I receive, so that I only get relevant messages.",
+      "acceptance_criteria": [
+        "Given a signed-in customer, When they save preferences, Then choices persist and appear on reload",
+        "Given an unauthenticated request, When it calls the preferences API, Then it receives 401",
+        "Given an unknown category, When saved, Then the API returns 400 ProblemDetails and the form shows the error"
+      ],
+      "estimate": 5,
+      "priority": "P1",
+      "labels": ["component:api", "component:web", "component:db"],
+      "depends_on": ["E1-T1"],
+      "req_refs": ["REQ-001"],
+      "design_ref": "docs/design/notification-preferences.md#6-api-contracts"
+    },
+    {
+      "id": "E1-T1",
+      "type": "task",
+      "parent": "E1",
+      "title": "Add notification_preferences table migration",
+      "body_markdown": "EF Core migration with unique (customer_id, category), FK to customers, timestamptz columns. Include rollback notes.",
+      "estimate": 2,
+      "priority": "P1",
+      "labels": ["component:db"],
+      "req_refs": ["REQ-001"],
+      "design_ref": "docs/design/notification-preferences.md#5-data-model-postgresql"
+    },
+    {
+      "id": "E1-T2",
+      "type": "task",
+      "parent": "E1",
+      "title": "Enforce per-customer authorization on preferences endpoints",
+      "body_markdown": "Authorization policy ensuring a customer can only read/write their own preferences (prevents IDOR). Add negative tests.",
+      "estimate": 2,
+      "priority": "P0",
+      "labels": ["security", "severity:high", "component:api"],
+      "req_refs": ["NFR-002"],
+      "design_ref": "docs/security/notification-preferences-threats.md"
+    },
+    {
+      "id": "E1-SP1",
+      "type": "spike",
+      "parent": "E1",
+      "title": "Spike: unsubscribe links without login (signed tokens)",
+      "body_markdown": "Timebox 1 day. Question: can we support one-click unsubscribe with signed, expiring tokens without weakening security? Output: short ADR.",
+      "estimate": null,
+      "priority": "P2",
+      "labels": ["spike"],
+      "req_refs": ["REQ-002"]
+    }
+  ]
+}
