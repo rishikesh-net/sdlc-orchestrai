@@ -171,7 +171,7 @@ def check_env(json_output: bool = False, strict: bool = False) -> int:
         record("config", "warn", f"Missing {CONFIG_FILE.relative_to(ROOT)}; tracker defaults to github")
         tracker = "github"
 
-    # 4. GitHub CLI (if tracker is github)
+    # 4. Tracker client (per adapter)
     if tracker == "github":
         code, out, _ = run_cmd(["gh", "--version"])
         if code == 0:
@@ -183,6 +183,16 @@ def check_env(json_output: bool = False, strict: bool = False) -> int:
                 record("gh_cli", "warn", f"{first_line} installed but not authenticated (`gh auth login` required)", {"auth_err": auth_err or auth_out})
         else:
             record("gh_cli", "warn", "GitHub CLI (`gh`) not found in PATH; required for push-backlog.sh")
+    elif tracker == "local":
+        local_cfg = config.get("local") if isinstance(config.get("local"), dict) else {}
+        out_dir = (local_cfg or {}).get("output_dir") or "docs/backlog/tickets"
+        code_jq, out_jq, _ = run_cmd(["jq", "--version"])
+        if code_jq == 0:
+            record("tracker_local", "ok", f"Local Markdown tracker -> {out_dir} ({out_jq})", {"output_dir": out_dir})
+        else:
+            record("tracker_local", "warn", f"Local tracker configured but jq is missing; ticket files cannot be written (output_dir: {out_dir})")
+    else:
+        record("tracker", "warn", f"Tracker '{tracker}' has no adapter yet; use github or local (or set SDLC_TRACKER)")
 
     # 5. SDLC Schemas
     expected_schemas = [

@@ -1,4 +1,5 @@
 # SDLCOrchestrAI tracker configuration
+# tracker: github | local        (jira | linear | azure-devops adapters are planned)
 tracker: github
 
 github:
@@ -6,3 +7,12 @@ github:
   project_number: ""              # optional GitHub Projects (v2) number; empty = skip
   project_owner: ""               # optional; defaults to the repo owner
   # Labels are created automatically (gh label create --force)
+
+local:
+  # Offline Markdown tickets (tracker: local). Relative to the repo root.
+  output_dir: docs/backlog/tickets
+
+# Credentials for future adapters must come from environment variables, never this file:
+#   JIRA_BASE_URL / JIRA_EMAIL / JIRA_API_TOKEN
+#   LINEAR_API_KEY
+#   AZURE_DEVOPS_ORG / AZURE_DEVOPS_PROJECT / AZURE_DEVOPS_EXT_PAT

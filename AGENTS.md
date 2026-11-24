@@ -8,7 +8,7 @@ and are copied to each client's folder by `scripts/sync-skills.sh`.
 - API: .NET (C#), ASP.NET Core, EF Core + Npgsql
 - Frontend: React (TypeScript preferred)
 - Database: PostgreSQL
-- Tracker: GitHub Issues (+ optional GitHub Projects), via the `gh` CLI
+- Tracker: GitHub Issues (+ optional GitHub Projects) via the `gh` CLI, or offline Markdown tickets (`tracker: local`); select in `.sdlc/config.yaml`
 - Prefer the existing stack and patterns in this repo over anything new. Justify deviations in an ADR.
 
 ## The delivery chain (each arrow is a HUMAN APPROVAL GATE)

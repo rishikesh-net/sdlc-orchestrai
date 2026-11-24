@@ -29,15 +29,17 @@ Optional scanners (the scripts skip any that are missing and say so):
    ```bash
    scripts/sdlc.cmd check-env     # Windows (or ./scripts/sdlc check-env on macOS/Linux)
    ```
-3. Open `.sdlc/config.yaml` and set your repository:
+3. Open `.sdlc/config.yaml` and set your tracker:
    ```yaml
-   tracker: github
+   tracker: github          # or: local (offline Markdown tickets)
    github:
      repo: your-org/your-repo
-     project_number: ""      # optional: GitHub Projects (v2) number
-     project_owner: ""       # optional: defaults to the repo owner
+     project_number: ""     # optional: GitHub Projects (v2) number
+     project_owner: ""      # optional: defaults to the repo owner
+   local:
+     output_dir: docs/backlog/tickets
    ```
-4. Authenticate GitHub:
+4. Authenticate GitHub (only for `tracker: github`):
    ```bash
    gh auth login
    gh auth refresh -s project    # only if you use GitHub Projects
@@ -100,13 +102,18 @@ Result: `docs/backlog/<feature>-backlog.md` and `<feature>-backlog.json` (epics,
 **Review:** Are stories small (1 to 3 days)? Does each have Given/When/Then criteria and requirement references?
 Is every requirement covered?
 
-### Step 4: Dry run, then create issues
+### Step 4: Dry run, then create tickets
 ```bash
 bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh \
   --file docs/backlog/<feature>-backlog.json --dry-run
 ```
-Read the plan table. When satisfied, run it again without `--dry-run`. The issue numbers and URLs are written back
+Read the plan table. When satisfied, run it again without `--dry-run`. Ticket references are written back
 into the JSON; commit it. Re-running is safe and updates rather than duplicates.
+
+The tracker comes from `.sdlc/config.yaml` (`tracker: github` or `tracker: local`). Override per command
+with `--tracker <name>` or `SDLC_TRACKER`. With `tracker: local`, tickets are Markdown files under
+`local.output_dir` (default `docs/backlog/tickets/`) and no `gh` authentication is needed. Details:
+`skills/sdlc-backlog-breakdown/references/tracker-adapters.md`.
 
 ### Step 5: Feature Implementation (Story to PR)
 Use `sdlc-feature-implementer` to write code against approved acceptance criteria with full traceability:
@@ -329,7 +336,7 @@ written. The output contract is in `skills/sdlc-security-review/references/sarif
 | Structure a new idea | "Turn this into requirements: ..." |
 | Design an approved requirement | "Design this from docs/requirements/x.md" |
 | Plan the work | "Break the approved design into a backlog" |
-| Create issues safely | `push-backlog.sh --file ... --dry-run`, then without the flag |
+| Create tickets safely | `push-backlog.sh --file ... --dry-run`, then without the flag |
 | Check for duplicates | `bash skills/sdlc-backlog-breakdown/scripts/pull-backlog.sh --state all` |
 | Review security | "Security review my branch against main" |
 | Check if a requirements doc is too big | `req-index.sh analyze --file <doc>` |
