@@ -3,6 +3,8 @@
 node_modules/
 bin/
 obj/
+__pycache__/
+*.pyc
 
 # Auto-generated client skills (generated locally via sdlc sync-skills)
 .agent/

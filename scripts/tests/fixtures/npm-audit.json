@@ -1,0 +1,26 @@
+{
+  "vulnerabilities": {
+    "lodash": {
+      "name": "lodash",
+      "severity": "high",
+      "range": "<4.17.21",
+      "via": [
+        {
+          "title": "Prototype Pollution",
+          "url": "https://github.com/advisories/GHSA-test"
+        }
+      ],
+      "fixAvailable": { "name": "lodash", "version": "4.17.21" }
+    },
+    "left-pad": {
+      "name": "left-pad",
+      "severity": "moderate",
+      "range": "*",
+      "via": ["Deprecated package"],
+      "fixAvailable": false
+    }
+  },
+  "metadata": {
+    "vulnerabilities": { "high": 1, "moderate": 1 }
+  }
+}

@@ -23,12 +23,15 @@ Input: `docs/design/<feature>.md`. Output: `docs/security/<feature>-threats.md`.
 ## Mode B - Code time (diff, PR, branch, or repo)
 1. Determine scope: `git diff --stat origin/main...HEAD` for a branch/PR, or the paths the user names.
    List the trust boundaries the change touches.
-2. Run the deterministic scans (they write to `.sdlc/reports/`, never print secret values):
-   - `bash skills/sdlc-security-review/scripts/scan-secrets.sh`
-   - `bash skills/sdlc-security-review/scripts/scan-deps.sh`
-   - `bash skills/sdlc-security-review/scripts/scan-sast.sh`
-   Treat results as evidence to triage, not as the final answer. If a tool is missing, say so and
-   continue with manual review; do not install tools without approval.
+2. Run the deterministic scans. They write SARIF 2.1.0 and normalized findings to `.sdlc/reports/`
+   (never secret values). `--feature <slug>` names the report; default `repo`.
+   - `bash skills/sdlc-security-review/scripts/scan-all.sh --feature <slug>` (all scanners, merged)
+   - or one at a time: `scan-secrets.sh`, `scan-deps.sh`, `scan-sast.sh`
+   Read `.sdlc/reports/<slug>-findings.json` (`scanners[]` says ran/fallback/skipped) and, if triaging
+   inline annotations, `.sdlc/reports/<slug>-findings.sarif`. See `references/sarif.md` for the output
+   contract and severity mapping. Treat heuristic-only findings (`confidence: needs-verification`) as
+   leads to confirm manually. If a tool is missing, say so and continue with manual review; do not
+   install tools without approval.
 3. Review manually against `references/owasp-checklist.md` and `references/dotnet-react-postgres.md`.
    Read the actual code paths (route -> authz -> validation -> data access -> response), not just the diff lines.
 4. For every finding record: ID, title, severity, confidence (confirmed | likely | needs verification),
@@ -68,7 +71,8 @@ Scope: <branch/PR/paths>   Date: <date>   Verdict: <Block | Fix before merge | M
 ## Rules
 - Static review only. Do not run exploits, fuzz, or contact live or production systems.
 - Never print, copy, or paste a secret. Cite `file:line`, state the secret type, recommend rotation and
-  history cleanup. Do not rotate or revoke anything yourself.
+  history cleanup. Do not rotate or revoke anything yourself. Scanner reports must contain no secret
+  values; keep them in `.sdlc/reports/` and reference `file:line` only.
 - Do not inflate severity. Separate confirmed from "needs verification". Say what you did not review.
 - Do not modify code, dependencies, CI, or infra without explicit approval.
 - Prefer root-cause fixes (e.g. a default-deny authorization policy) over per-endpoint patches.

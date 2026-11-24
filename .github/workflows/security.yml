@@ -36,6 +36,31 @@ jobs:
       - name: Vulnerable dependencies (NuGet + npm)
         run: SDLC_STRICT=1 bash skills/sdlc-security-review/scripts/scan-deps.sh
 
+  # Publishes SARIF from the same scripts agents run locally. Non-blocking: findings
+  # land in Security > Code scanning for triage; CodeQL below remains the primary SAST gate.
+  scans:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: SARIF converter tests
+        run: python -m unittest discover -s scripts/tests -v
+      - name: Run security scanners
+        continue-on-error: true
+        run: bash skills/sdlc-security-review/scripts/scan-all.sh --feature ci
+      - name: Upload SARIF
+        if: always() && hashFiles('.sdlc/reports/ci-findings.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: .sdlc/reports/ci-findings.sarif
+          category: sdlc-scanners
+
+
   codeql:
     runs-on: ubuntu-latest
     permissions:

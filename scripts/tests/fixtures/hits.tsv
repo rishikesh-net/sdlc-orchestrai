@@ -1,0 +1,3 @@
+heuristic-sast.dynamic-eval	Api/Runner.cs	12	high	Dynamic code evaluation (eval/new Function) - review input source
+heuristic-sast.cors-any	Api/Startup.cs	31	medium	Permissive CORS policy (AllowAnyOrigin)
+heuristic-secrets.jwt	src/token.ts	4	high	JSON Web Token pattern (value redacted)

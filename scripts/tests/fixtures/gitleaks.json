@@ -1,0 +1,18 @@
+[
+  {
+    "RuleID": "aws-access-token",
+    "Description": "AWS Access Token",
+    "File": "D:/repo/config/appsettings.json",
+    "StartLine": 7,
+    "Secret": "AKIAIOSFODNN7CANARYSECRET",
+    "Match": "AKIAIOSFODNN7CANARYSECRET"
+  },
+  {
+    "RuleID": "generic-api-key",
+    "Description": "Generic API Key",
+    "File": "D:/repo/src/settings.ts",
+    "StartLine": 3,
+    "Secret": "CANARY_DO_NOT_LEAK",
+    "Match": "apiKey = 'CANARY_DO_NOT_LEAK'"
+  }
+]
