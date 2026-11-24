@@ -19,12 +19,17 @@ done
 jq -e '.schema_version==1 and (.items|type=="array")' "$FILE" >/dev/null || { echo "ERROR: not a valid backlog file" >&2; exit 2; }
 OUT="$(jq -c '
   ( .items[] | {type:"entity", id:.id, kind:.type, title:.title}
-      + (if (.external.key // null) != null then {issue: ((.external.key | tonumber?) // .external.key)} else {} end)
+      + (if (.external.key // null) != null then
+           (if ((.external.key | tostring) | test("^[0-9]+$"))
+            then {issue: (.external.key | tonumber)}
+            else {external_key: (.external.key | tostring)} end)
+         else {} end)
+      + (if (.external.tracker // null) != null then {tracker: (.external.tracker | tostring)} else {} end)
       + (if (.priority // null) != null then {priority:.priority} else {} end)
       + (if (.estimate // null) != null then {estimate:.estimate} else {} end) ),
   ( .items[] | . as $i | ((.req_refs // [])[] | {type:"relation", from:$i.id, rel:"implements", to:.}) ),
   ( .items[] | . as $i | ((.depends_on // [])[] | {type:"relation", from:$i.id, rel:"depends_on", to:.}) ),
-  ( .items[] | select((.parent // "") != "") | {type:"relation", from:.id, rel:"part_of", to:.parent} )' "$FILE")"
+  ( .items[] | select((.parent // "") != "") | {type:"relation", from:.id, rel:"part_of", to:.parent} )' "$FILE" | tr -d '\r')"
 if [[ $APPLY -eq 1 ]]; then
   tmp="$(mktemp)"; printf '%s\n' "$OUT" > "$tmp"
   bash "$(dirname "${BASH_SOURCE[0]}")/sdlc-graph.sh" import --file "$tmp"; rm -f "$tmp"

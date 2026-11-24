@@ -200,7 +200,10 @@ flowchart TD
 - [x] Update `README.md` and `GETTING_STARTED.md` with complete Phase 1 and Phase 2 workflows.
 
 ### Phase 3: Enterprise Extensibility & Advanced Orchestration
-- [ ] Abstract tracker logic into `adapters/` (GitHub, Jira, Linear, Local Markdown).
+- [x] Abstract tracker logic into `adapters/` (GitHub, Jira, Linear, Local Markdown).
+  - [x] Adapter contract + driver refactor (`push-backlog.sh`, `pull-backlog.sh`); GitHub parity.
+  - [x] Local/offline Markdown adapter (`tracker: local`, `docs/backlog/tickets/<id>.md`).
+  - [ ] Jira, Linear, and Azure DevOps adapters (planned follow-ups).
 - [x] Add SARIF generation to `sdlc-security-review` scripts.
   - [x] `.sdlc/reports/<feature>-findings.sarif` (SARIF 2.1.0) + `<feature>-findings.json` (`.sdlc/schema/findings.schema.json`).
   - [x] Labeled heuristic fallbacks for secrets and SAST; missing tools recorded as `ran`/`fallback`/`skipped`.

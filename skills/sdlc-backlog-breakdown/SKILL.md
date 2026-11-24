@@ -1,13 +1,14 @@
 ---
 name: sdlc-backlog-breakdown
-description: Break an approved requirements doc and design doc into a product backlog - epics, vertical-slice user stories, technical tasks, and spikes with acceptance criteria, estimates, priorities, and dependencies - and create them as GitHub issues. Use this whenever the user wants to split work into issues or tickets, create a backlog, plan a sprint's work, write user stories, or push planned work to GitHub, even if they only say "break this down" or "create the issues". Always dry-runs first and never creates issues without approval.
+description: Break an approved requirements doc and design doc into a product backlog - epics, vertical-slice user stories, technical tasks, and spikes with acceptance criteria, estimates, priorities, and dependencies - and create them as tracker tickets (GitHub issues or local Markdown). Use this whenever the user wants to split work into issues or tickets, create a backlog, plan a sprint's work, write user stories, or push planned work to a tracker, even if they only say "break this down" or "create the issues". Always dry-runs first and never creates tickets without approval.
 ---
 
-# Backlog Breakdown (GitHub)
+# Backlog Breakdown
 
 Input: approved `docs/requirements/<feature>.md` and `docs/design/<feature>.md`.
 Output: `docs/backlog/<feature>-backlog.md` (human), `docs/backlog/<feature>-backlog.json`
-(machine, validates against `.sdlc/schema/backlog.schema.json`), then GitHub issues via script.
+(machine, validates against `.sdlc/schema/backlog.schema.json`), then tickets via the configured
+tracker adapter (`github` or `local`; see `references/tracker-adapters.md`).
 
 ## Workflow
 1. Read requirements, design, ADRs, and `docs/security/<feature>-threats.md` if present.
@@ -28,8 +29,9 @@ Output: `docs/backlog/<feature>-backlog.md` (human), `docs/backlog/<feature>-bac
 8. After approval, dry-run:
    `bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh --file docs/backlog/<feature>-backlog.json --dry-run`
    Show the plan. STOP for approval again.
-9. Only after explicit approval, run the same command without `--dry-run`. The script writes issue
-   numbers and URLs back into the JSON (`external`). Commit the updated JSON.
+9. Only after explicit approval, run the same command without `--dry-run`. The script writes ticket
+   references (`external`) back into the JSON. Commit the updated JSON (and local ticket files when
+   `tracker: local`).
 
 ## Slicing (.NET + React + PostgreSQL)
 - Good: "User can save notification preferences" = migration + API endpoint + React form + tests.
@@ -44,21 +46,22 @@ Output: `docs/backlog/<feature>-backlog.md` (human), `docs/backlog/<feature>-bac
 - `type`: epic | story | task | spike. `parent`: the epic (or story, for tasks).
 - `priority`: P0 (blocker) to P3 (nice to have). `estimate`: story points (1, 2, 3, 5, 8) or null for epics/spikes.
 - Security-driven items use labels `security` plus `severity:<level>` where relevant.
-- Labels become GitHub labels automatically (`type:*`, `priority:*`, `estimate:*`, plus your own).
+- Labels become tracker labels automatically where supported (`type:*`, `priority:*`, `estimate:*`, plus your own).
 
 ## Rules
-- Never create issues, edit issues, or touch GitHub Projects without an approved dry-run.
+- Never create tickets, edit tickets, or touch boards/Projects without an approved dry-run.
 - Every item traces to requirements (`req_refs`) and a design section (`design_ref`).
 - Acceptance criteria must be testable and observable. Include at least one negative/error case per story.
 - Do not invent requirements. Gaps go into a "Questions" section of the `.md`, not into stories.
 - Re-running the script must not create duplicates. If it reports a failure, fix the cause and re-run.
-- Prerequisites: `gh` (authenticated, with `repo` scope; add `project` scope for Projects), `jq`, `git`.
+- Prerequisites: `jq`, `git`; `gh` (authenticated) for `tracker: github`; nothing else for `tracker: local`.
+  Tracker selection and local ticket layout: `references/tracker-adapters.md`.
 
 ## Shared memory (cross-client continuity)
-- Start of session: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh resume`. If `docs/backlog/<feature>-backlog.json` already has `external.key` values, issues were created: do not recreate, update instead.
+- Start of session: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh resume`. If `docs/backlog/<feature>-backlog.json` already has `external.key` values, tickets were created: do not recreate, update instead.
 - After writing the backlog files: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh checkpoint --client <your-client> --feature <slug> --phase backlog --gate backlog=in-review --artifact docs/backlog/<slug>-backlog.json --artifact docs/backlog/<slug>-backlog.md --next "Human review of backlog; then dry-run push"`.
 - Load the backlog into the graph: `bash skills/sdlc-session-handoff/scripts/backlog-to-graph.sh --file docs/backlog/<slug>-backlog.json --apply`, then `bash skills/sdlc-session-handoff/scripts/sdlc-graph.sh gaps` to confirm every requirement is covered.
-- After the real push: re-run `backlog-to-graph.sh --apply` (to record issue numbers), then checkpoint `--phase build --gate backlog=approved --gate issues=approved --next "Implement <first story id>"`. Commit the updated JSON and `.sdlc/`.
+- After the real push: re-run `backlog-to-graph.sh --apply` (to record ticket references), then checkpoint `--phase build --gate backlog=approved --gate issues=approved --next "Implement <first story id>"`. Commit the updated JSON (and local ticket files), and `.sdlc/`.
 
 ## Large requirements (pack mode)
 When requirements are a pack, break down **one slice at a time** so each backlog file stays reviewable:
