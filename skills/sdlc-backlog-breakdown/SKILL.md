@@ -71,3 +71,8 @@ When requirements are a pack, break down **one slice at a time** so each backlog
 4. Coverage: every REQ-ID of the slice appears in at least one item. Check with `bash skills/sdlc-session-handoff/scripts/backlog-to-graph.sh --file <file> --apply` then `sdlc-graph.sh gaps`.
 5. Dry-run and push per slice file (`push-backlog.sh --file docs/backlog/<feature>/<slice>-backlog.json --dry-run`). Slice epics can be pushed independently, in dependency order.
 6. Gate per slice: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh checkpoint --client <your-client> --feature <feature> --phase backlog --slice <slice> --gate backlog=in-review --artifact docs/backlog/<feature>/<slice>-backlog.json`.
+7. Optional parallel breakdown: after per-slice design approval, the lead can run
+   `python scripts/sdlc.py slices plan --feature <feature> --stage backlog`, dispatch one agent per work order,
+   then `sdlc slices check --feature <feature> --stage backlog`. Subagents write only their
+   `docs/backlog/<feature>/<slice>-backlog.{json,md}` and notes; they must not run `push-backlog.sh` or checkpoint.
+   The lead reconciles epics/dependencies, dry-runs, and pushes after human approval.

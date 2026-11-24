@@ -10,17 +10,21 @@
       "artifacts": [
         ".github/workflows/security.yml",
         ".sdlc/schema/findings.schema.json",
+        ".sdlc/schema/parallel-manifest.schema.json",
+        "scripts/sdlc.py",
+        "scripts/tests/test_backlog_adapters.py",
+        "scripts/tests/test_slices.py",
+        "skills/sdlc-backlog-breakdown/references/tracker-adapters.md",
+        "skills/sdlc-backlog-breakdown/scripts/adapters/common.sh",
+        "skills/sdlc-backlog-breakdown/scripts/adapters/github.sh",
+        "skills/sdlc-backlog-breakdown/scripts/adapters/local.sh",
         "skills/sdlc-feature-implementer/SKILL.md",
         "skills/sdlc-security-review/references/sarif.md",
-        "skills/sdlc-security-review/scripts/sarif.py"
+        "skills/sdlc-security-review/scripts/sarif.py",
+        "skills/sdlc-session-handoff/references/parallel-orchestration.md"
       ],
       "open_questions": [],
       "notes": [
-        {
-          "at": "2026-11-23T15:07:11Z",
-          "by": "antigravity",
-          "text": "Completed Phase 1 foundations"
-        },
         {
           "at": "2026-11-24T16:33:00Z",
           "by": "opencode",
@@ -35,15 +39,25 @@
           "at": "2026-11-24T17:09:22Z",
           "by": "opencode",
           "text": "Tuned heuristic SAST: app-source allowlist, case-sensitive SQL concat rule, SDLC_SCAN_ROOT override, POSIX integration test; framework-repo false positives resolved"
+        },
+        {
+          "at": "2026-11-24T17:37:14Z",
+          "by": "opencode",
+          "text": "Phase 3 item 3A implemented: adapter contract, GitHub parity, local Markdown tracker, tracker precedence, CRLF-safe jq helpers, graph external_key handling, docs and tests"
+        },
+        {
+          "at": "2026-11-24T17:52:51Z",
+          "by": "opencode",
+          "text": "Phase 3 item 6 implemented: sdlc slices plan/show/check, scoped work orders + manifest, design/threat/backlog fan-in checks, templates and orchestration reference"
         }
       ],
       "updated_by": "opencode",
-      "updated_at": "2026-11-24T17:09:22Z",
-      "next_action": "Review 3B diff (SARIF + heuristic tuning); then implement Phase 3 item 3A (adapter layer + GitHub parity + local tracker)"
+      "updated_at": "2026-11-24T17:52:51Z",
+      "next_action": "Review 3A + 3C diffs and commit; then optional Jira/Linear/Azure DevOps adapters or Phase 3 wrap-up"
     }
   },
   "updated_by": "opencode",
-  "updated_at": "2026-11-24T17:09:22Z",
-  "repo_sha": "61b0580",
+  "updated_at": "2026-11-24T17:52:51Z",
+  "repo_sha": "b33ac87",
   "repo_dirty": true
 }

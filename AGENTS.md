@@ -32,6 +32,7 @@ Never skip a gate. Never start a later phase on an unapproved earlier artifact.
 - Pack IDs are slice-prefixed (`REQ-PREF-001`); small single-file features keep global IDs (`REQ-001`).
 - Never load a whole pack into context. Read `00-index.md`, then one slice (`req-index.sh show --feature F --slice S` or `--id REQ-ID`).
 - Design, backlog, and security work run one slice at a time; approvals are per slice (`sdlc-state.sh checkpoint --slice S` or `sdlc checkpoint --slice S`).
+- Parallel slice work is optional and lead-mediated: `sdlc slices plan` emits one scoped work order per approved slice; subagents write only their outputs (never `state.json`, `index.json`, shared docs, or tickets); the lead runs `sdlc slices check` and checkpoints each slice after human review. Requirements authoring stays sequential.
 - An existing large document is split with `req-index.sh analyze | skeleton | split`: verbatim, with a coverage check; never rewrite requirement wording during a split.
 
 ## Session protocol (shared memory across clients)
@@ -59,6 +60,7 @@ Project memory lives in the repo so any client (Claude Code, Copilot, Cursor, Op
 - `docs/backlog/<feature>-backlog.md` (human) and `<feature>-backlog.json` (machine; schema in `.sdlc/schema/`)
 - `.sdlc/config.yaml` — tracker config. `.sdlc/reports/` — scan output (git-ignored): `<feature>-findings.sarif` (SARIF 2.1.0) and `<feature>-findings.json` (schema `.sdlc/schema/findings.schema.json`)
 - `.sdlc/state.json`, `.sdlc/HANDOFF.md`, `.sdlc/memory/` — shared cross-client memory (committed)
+- `.sdlc/parallel/` — generated per-slice work orders, manifests, and fan-in reports (git-ignored; `sdlc slices plan|check`)
 
 ## Traceability
 Use IDs end to end: `REQ-012` -> design section -> `E1-S3` -> GitHub issue `#123` -> PR. Every story

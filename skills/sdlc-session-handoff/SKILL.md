@@ -76,3 +76,10 @@ Relations: implements, covers, depends_on, blocks, part_of, mitigated_by, closes
 For large requirements organized as a pack, approve per slice: `sdlc-state.sh checkpoint --feature F --slice <slice> --gate requirements=approved ...`.
 The gate is stored as `requirements:<slice>` and the slice file's content hash is recorded. `resume` reports `STALE SLICE: F/<slice>` when that file
 changes afterwards (also `req-index.sh stale --feature F`). Treat a stale slice as needing re-review of its design and backlog before you rely on earlier approvals.
+
+## Parallel slice orchestration (lead-mediated)
+`python scripts/sdlc.py slices plan --feature F --stage design|threat-model|backlog` writes one scoped work order per eligible slice under
+`.sdlc/parallel/F/<stage>/`; `sdlc slices check` verifies fan-in (coverage, missing/stale outputs, duplicate threats) and writes `report.{md,json}`.
+Subagents must never write `.sdlc/state.json`, `index.json`, shared docs, or tickets, and must not checkpoint or commit. Only the lead checkpoints
+per slice (`--slice`) after human review and commits `.sdlc/`. Requirements authoring stays sequential. Full workflow:
+`references/parallel-orchestration.md`; templates: `templates/slice-work-order.md.tmpl`, `templates/slice-agent-prompt.md.tmpl`, `templates/aggregation-checklist.md.tmpl`.

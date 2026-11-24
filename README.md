@@ -196,6 +196,20 @@ bash $R build    --feature billing && bash $R validate --feature billing
 bash $R show     --feature billing --slice payments                          # or --id REQ-PAY-003 or --index
 ```
 
+**Parallel slice processing (optional).** After slices are approved, the lead can fan out design, threat-model,
+or backlog work one slice per agent without loading the whole pack:
+
+```bash
+python scripts/sdlc.py slices plan  --feature billing --stage design --max-parallel 3
+python scripts/sdlc.py slices check --feature billing --stage design
+```
+
+Each slice gets a scoped work order in `.sdlc/parallel/`; subagents cannot write state, `index.json`, shared
+docs, or tickets. The lead runs the deterministic check, reconciles shared decisions and ADR proposals, then
+checkpoints each slice after human review. Client-specific fan-out (Claude Code subagents, OpenCode tasks,
+Antigravity `run_workflow`, Copilot/Cursor sequential fallback) is described in
+`skills/sdlc-session-handoff/references/parallel-orchestration.md`.
+
 Splitting is deterministic and lossless: lines are copied verbatim with provenance comments, a coverage check fails on any unassigned or overlapping
 line, and the original is preserved. Legacy IDs can be kept or renumbered to slice-prefixed IDs (with `id-map.json`). Full instructions:
 [GETTING_STARTED.md](GETTING_STARTED.md#5-large-requirements-slices-and-splitting-an-existing-document) and
