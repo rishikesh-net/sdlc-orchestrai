@@ -57,7 +57,7 @@ Project memory lives in the repo so any client (Claude Code, Copilot, Cursor, Op
 - `docs/design/<feature>.md`, `docs/adr/NNNN-title.md` — design and decisions
 - `docs/security/<name>-threats.md`, `<name>-review.md`, `<name>-findings.json`
 - `docs/backlog/<feature>-backlog.md` (human) and `<feature>-backlog.json` (machine; schema in `.sdlc/schema/`)
-- `.sdlc/config.yaml` — tracker config. `.sdlc/reports/` — scan output (git-ignored)
+- `.sdlc/config.yaml` — tracker config. `.sdlc/reports/` — scan output (git-ignored): `<feature>-findings.sarif` (SARIF 2.1.0) and `<feature>-findings.json` (schema `.sdlc/schema/findings.schema.json`)
 - `.sdlc/state.json`, `.sdlc/HANDOFF.md`, `.sdlc/memory/` — shared cross-client memory (committed)
 
 ## Traceability

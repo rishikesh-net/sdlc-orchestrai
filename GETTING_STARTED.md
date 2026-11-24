@@ -297,12 +297,19 @@ Keep in mind: always commit `.sdlc/`, never put secrets in memory files, and tre
 
 ## 7. Run the scans yourself
 ```bash
-bash skills/sdlc-security-review/scripts/scan-secrets.sh
-bash skills/sdlc-security-review/scripts/scan-deps.sh
-bash skills/sdlc-security-review/scripts/scan-sast.sh
-SDLC_STRICT=1 bash skills/sdlc-security-review/scripts/scan-deps.sh   # non-zero exit on findings
+bash skills/sdlc-security-review/scripts/scan-all.sh --feature <slug>       # all scanners, merged
+bash skills/sdlc-security-review/scripts/scan-secrets.sh --feature <slug>
+bash skills/sdlc-security-review/scripts/scan-deps.sh --feature <slug>
+bash skills/sdlc-security-review/scripts/scan-sast.sh --feature <slug>
+SDLC_STRICT=1 bash skills/sdlc-security-review/scripts/scan-all.sh --feature <slug>   # non-zero on findings
+
+python scripts/sdlc.py scan --feature <slug>                                # same runner via the CLI
+python skills/sdlc-security-review/scripts/sarif.py validate .sdlc/reports/<slug>-findings.sarif
 ```
-Reports land in `.sdlc/reports/` (git-ignored). Secret values are never printed.
+Reports land in `.sdlc/reports/`: `<slug>-findings.sarif` (SARIF 2.1.0 for GitHub Code Scanning and IDEs)
+and `<slug>-findings.json` (normalized, schema `.sdlc/schema/findings.schema.json`). Missing tools fall
+back to labeled heuristics and record `ran`/`fallback`/`skipped` per scanner. Secret values are never
+written. The output contract is in `skills/sdlc-security-review/references/sarif.md`.
 
 ## 8. Turn on CI enforcement
 1. Commit `.github/workflows/security.yml` and `.github/workflows/sync-check.yml`.

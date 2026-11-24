@@ -221,16 +221,22 @@ never authorizes new side effects. CI validates both files (`sync-check.yml`). D
 ## Security tooling
 | Script | What it checks | Tools used |
 |---|---|---|
-| `scan-secrets.sh` | Committed secrets | gitleaks, else trufflehog, else a regex fallback |
-| `scan-deps.sh` | Vulnerable NuGet and npm dependencies | `dotnet list package --vulnerable`, `npm audit` |
-| `scan-sast.sh` | Static analysis (C#, TypeScript/React, OWASP rules) | Semgrep |
+| `scan-all.sh` | Runs every scanner and merges one report | all of the below |
+| `scan-secrets.sh` | Committed secrets | gitleaks, else trufflehog, else labeled regex heuristics |
+| `scan-deps.sh` | Vulnerable NuGet and npm dependencies | `dotnet list package --vulnerable --format json`, `npm audit --json` |
+| `scan-sast.sh` | Static analysis (C#, TypeScript/React, OWASP rules) | Semgrep, else conservative heuristics |
 
-All scripts write to `.sdlc/reports/`, never print secret values, and skip (rather than install) missing tools.
-Set `SDLC_STRICT=1` to exit non-zero on findings. The `sdlc-security-review` skill interprets the results and adds
-manual review against OWASP and stack-specific checklists (ASP.NET Core, EF Core/Npgsql, React, PostgreSQL).
+All scripts write SARIF 2.1.0 and normalized findings to `.sdlc/reports/<feature>-findings.sarif` and
+`.sdlc/reports/<feature>-findings.json` (default feature `repo`; set `--feature <slug>` or `SDLC_FEATURE`).
+`scanners[].status` records `ran`, `fallback`, or `skipped`, so "no findings" is distinguishable from
+"not scanned". Missing tools use built-in heuristic fallbacks instead of silently skipping; never install
+tools without approval. Set `SDLC_STRICT=1` to exit non-zero on findings, or run
+`python scripts/sdlc.py scan --feature <slug>`. Output contract: `skills/sdlc-security-review/references/sarif.md`.
+The `sdlc-security-review` skill interprets the results and adds manual review against OWASP and
+stack-specific checklists (ASP.NET Core, EF Core/Npgsql, React, PostgreSQL).
 
 ## Continuous integration
-- `.github/workflows/security.yml`: gitleaks, dependency audit, and CodeQL (C# and JavaScript/TypeScript) on pull requests, pushes to `main`, and weekly.
+- `.github/workflows/security.yml`: gitleaks, dependency audit, CodeQL (C# and JavaScript/TypeScript), and a non-blocking `scans` job that uploads `ci-findings.sarif` to GitHub Code Scanning on pull requests, pushes to `main`, and weekly.
 - `.github/workflows/sync-check.yml`: fails a PR if client skill copies drift from `skills/`.
 
 Set the .NET and Node versions in `security.yml` and consider pinning third-party actions to commit SHAs.
@@ -257,8 +263,8 @@ The biggest quality lever is your own context. Edit the files under `skills/` (n
 ## Known limitations
 - Estimates are written as `estimate:N` labels; mapping to a GitHub Projects number field needs your project's field IDs.
 - Sub-issues and issue dependencies depend on your GitHub plan and organization settings.
-- Semgrep fetches rules from its registry (network required); CodeQL in CI is the primary SAST gate.
-- The scripts are Bash and require `jq`; Windows users need Git Bash or WSL.
+- Semgrep fetches rules from its registry (network required); CodeQL in CI is the primary SAST gate. When Semgrep or gitleaks is unavailable, the scripts emit labeled heuristic findings (`confidence: needs-verification`) instead of skipping silently. Heuristic SAST scans application source extensions only, so tooling/shell/config files do not create noise (secrets scanning still covers them).
+- The backlog/session scripts are Bash and require `jq`; Windows users need Git Bash or WSL.
 - Splitting works on Markdown with headings and line ranges. Convert Word/PDF/wiki exports first (for example `pandoc`), and review the split report for dangling cross-references; the tool never rewrites requirement wording.
 - Requirement-ID detection is regex-based; unusual ID styles need `--id-regex`.
 - Shared memory assumes one active writer per feature at a time; `state.json` conflicts are resolved by hand (see `state-protocol.md`).

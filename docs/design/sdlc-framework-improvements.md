@@ -201,5 +201,8 @@ flowchart TD
 
 ### Phase 3: Enterprise Extensibility & Advanced Orchestration
 - [ ] Abstract tracker logic into `adapters/` (GitHub, Jira, Linear, Local Markdown).
-- [ ] Add SARIF generation to `sdlc-security-review` scripts.
+- [x] Add SARIF generation to `sdlc-security-review` scripts.
+  - [x] `.sdlc/reports/<feature>-findings.sarif` (SARIF 2.1.0) + `<feature>-findings.json` (`.sdlc/schema/findings.schema.json`).
+  - [x] Labeled heuristic fallbacks for secrets and SAST; missing tools recorded as `ran`/`fallback`/`skipped`.
+  - [x] Non-blocking `scans` job uploads SARIF to GitHub Code Scanning.
 - [ ] Provide workflow templates for parallel slice processing via agent swarms.

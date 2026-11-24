@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "projects": [
+    {
+      "path": "D:/repo/Api/Api.csproj",
+      "frameworks": [
+        {
+          "framework": "net8.0",
+          "topLevelPackages": [
+            {
+              "id": "Newtonsoft.Json",
+              "resolvedVersion": "12.0.1",
+              "vulnerabilities": [
+                {
+                  "severity": "High",
+                  "advisoryurl": "https://github.com/advisories/GHSA-json"
+                }
+              ]
+            }
+          ],
+          "transitivePackages": []
+        }
+      ]
+    }
+  ]
+}

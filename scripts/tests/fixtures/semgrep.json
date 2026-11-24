@@ -1,0 +1,25 @@
+{
+  "results": [
+    {
+      "check_id": "javascript.express.security.audit.xss",
+      "path": "/repo/src/app.ts",
+      "start": { "line": 42 },
+      "extra": {
+        "severity": "ERROR",
+        "message": "Detected user input flowing into an HTML response",
+        "fix": "Escape the value before rendering",
+        "metadata": { "references": ["https://example.test/rule"] }
+      }
+    },
+    {
+      "check_id": "csharp.lang.security.sql-injection",
+      "path": "/repo/Api/Repo.cs",
+      "start": { "line": 9 },
+      "extra": {
+        "severity": "WARNING",
+        "message": "SQL built by string concatenation",
+        "metadata": {}
+      }
+    }
+  ]
+}

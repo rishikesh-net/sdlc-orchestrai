@@ -187,6 +187,7 @@ def check_env(json_output: bool = False, strict: bool = False) -> int:
     # 5. SDLC Schemas
     expected_schemas = [
         "backlog.schema.json",
+        "findings.schema.json",
         "graph.schema.json",
         "requirements-index.schema.json",
         "split-plan.schema.json",
@@ -260,10 +261,11 @@ def check_env(json_output: bool = False, strict: bool = False) -> int:
     if sec_tools:
         msg = f"Available: {', '.join(sec_tools)}"
         if missing_sec_tools:
-            msg += f" (optional missing: {', '.join(missing_sec_tools)})"
+            msg += f" (optional missing: {', '.join(missing_sec_tools)}; heuristic fallback will be used)"
         record("security_tools", "ok", msg)
     else:
-        record("security_tools", "warn", f"None of the recommended scanners found ({', '.join(missing_sec_tools)}); fallback regex mode will be used")
+        record("security_tools", "warn", f"None of the recommended scanners found ({', '.join(missing_sec_tools)}); heuristic fallback will be used")
+    record("sarif", "ok", "SARIF 2.1.0 reports -> .sdlc/reports/<feature>-findings.sarif (run `sdlc scan --feature <slug>`)")
 
     # Output Rendering
     if json_output:
@@ -469,12 +471,13 @@ def verify_implementation() -> List[Dict[str, Any]]:
     # Check for test files in repo
     test_files = list(ROOT.rglob("*Tests.cs")) + list(ROOT.rglob("*Test.cs")) + \
                  list(ROOT.rglob("*.test.ts")) + list(ROOT.rglob("*.test.tsx")) + \
-                 list(ROOT.rglob("*.spec.ts")) + list(ROOT.rglob("*.spec.tsx"))
+                 list(ROOT.rglob("*.spec.ts")) + list(ROOT.rglob("*.spec.tsx")) + \
+                 list(ROOT.rglob("test_*.py")) + list(ROOT.rglob("*_test.py"))
     test_files = [f for f in test_files if not any(part.startswith(".") for part in f.parts)]
     if test_files:
         findings.append({"level": "ok", "file": "tests", "message": f"Found {len(test_files)} test file(s) in repository"})
     else:
-        findings.append({"level": "warn", "file": "tests", "message": "No test files detected (*Tests.cs, *.test.ts(x), *.spec.ts(x))"})
+        findings.append({"level": "warn", "file": "tests", "message": "No test files detected (*Tests.cs, *.test.ts(x), *.spec.ts(x), test_*.py)"})
 
     return findings
 
@@ -1075,6 +1078,24 @@ def cmd_validate() -> int:
     return 0
 
 
+def cmd_scan(feature: str, strict: bool = False) -> int:
+    """Run the security scanners via the deterministic shell scripts, writing SARIF + JSON."""
+    script = ROOT / "skills" / "sdlc-security-review" / "scripts" / "scan-all.sh"
+    if not script.is_file():
+        print(f"ERROR: scanner script not found: {script}", file=sys.stderr)
+        return 1
+    rel_script = script.relative_to(ROOT).as_posix()
+    cmd = ["bash", rel_script, "--feature", feature]
+    if strict:
+        cmd.append("--strict")
+    try:
+        proc = subprocess.run(cmd, cwd=str(ROOT))
+    except FileNotFoundError:
+        print("ERROR: bash not found; install Git Bash or WSL (or run the scripts directly)", file=sys.stderr)
+        return 127
+    return proc.returncode
+
+
 # ---------------------------------------------------------------------------
 # CLI Argument Dispatcher
 # ---------------------------------------------------------------------------
@@ -1097,6 +1118,11 @@ def main():
     p_verify.add_argument("--gate", choices=["requirements", "design", "backlog", "implementation", "all"], default="all", help="Target gate")
     p_verify.add_argument("--feature", help="Target feature name")
     p_verify.add_argument("--json", action="store_true", help="Output findings in JSON format")
+
+    # scan
+    p_scan = subparsers.add_parser("scan", help="Run security scanners and write SARIF + findings JSON")
+    p_scan.add_argument("--feature", default=os.environ.get("SDLC_FEATURE", "repo"), help="Feature/report slug (default: repo)")
+    p_scan.add_argument("--strict", action="store_true", help="Return error code when findings exist")
 
     # story
     p_story = subparsers.add_parser("story", help="Manage story implementation lifecycle")
@@ -1160,6 +1186,8 @@ def main():
         sys.exit(check_env(json_output=args.json, strict=args.strict))
     elif args.subcommand == "verify":
         sys.exit(verify_gate(gate=args.gate, feature=args.feature, json_output=args.json))
+    elif args.subcommand == "scan":
+        sys.exit(cmd_scan(feature=args.feature, strict=args.strict))
     elif args.subcommand == "story":
         if args.story_action == "show":
             sys.exit(cmd_story_show(story_id=args.story_id, feature=args.feature, json_output=args.json))
