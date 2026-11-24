@@ -2,26 +2,43 @@
   "schema_version": 1,
   "features": {
     "framework-improvements": {
-      "phase": "design",
+      "phase": "implementation",
       "gates": {
-        "design": "approved"
+        "design": "approved",
+        "implementation": "approved"
       },
-      "artifacts": [],
+      "artifacts": [
+        ".github/workflows/security.yml",
+        ".sdlc/schema/findings.schema.json",
+        "skills/sdlc-feature-implementer/SKILL.md",
+        "skills/sdlc-security-review/references/sarif.md",
+        "skills/sdlc-security-review/scripts/sarif.py"
+      ],
       "open_questions": [],
       "notes": [
         {
           "at": "2026-11-23T15:07:11Z",
           "by": "antigravity",
           "text": "Completed Phase 1 foundations"
+        },
+        {
+          "at": "2026-11-24T16:33:00Z",
+          "by": "opencode",
+          "text": "Phase 2 complete; starting Phase 3 item 3B (SARIF + heuristic fallbacks)"
+        },
+        {
+          "at": "2026-11-24T16:44:43Z",
+          "by": "opencode",
+          "text": "Phase 3 item 3B implemented: SARIF 2.1.0 + normalized findings, labeled heuristic fallbacks, scan-all + sdlc scan, non-blocking CI upload, converter tests"
         }
       ],
-      "updated_by": "antigravity",
-      "updated_at": "2026-11-23T15:07:11Z",
-      "next_action": "Implement Phase 2"
+      "updated_by": "opencode",
+      "updated_at": "2026-11-24T16:44:43Z",
+      "next_action": "Review 3B diff; then implement Phase 3 item 3A (adapter layer + GitHub parity + local tracker)"
     }
   },
-  "updated_by": "antigravity",
-  "updated_at": "2026-11-23T15:07:11Z",
-  "repo_sha": "64f8c42",
+  "updated_by": "opencode",
+  "updated_at": "2026-11-24T16:44:43Z",
+  "repo_sha": "9ecb9c4",
   "repo_dirty": true
 }

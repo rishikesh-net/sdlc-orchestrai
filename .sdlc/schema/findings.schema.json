@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SDLCOrchestrAI scanner findings",
+  "description": "Normalized scanner output written to .sdlc/reports/<feature>-findings.json (combined) or .sdlc/reports/<feature>-<scanner>.json (per scanner). Secret values are never included.",
+  "oneOf": [
+    {
+      "title": "Combined findings",
+      "type": "object",
+      "required": ["schema_version", "feature", "findings"],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "feature": { "type": "string" },
+        "generated_at": { "type": "string" },
+        "scanners": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "status"],
+            "properties": {
+              "name": { "type": "string" },
+              "status": { "enum": ["ran", "fallback", "skipped"] },
+              "tool_version": { "type": ["string", "null"] },
+              "message": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "findings": { "$ref": "#/definitions/findings" }
+      }
+    },
+    {
+      "title": "Per-scanner findings",
+      "type": "object",
+      "required": ["schema_version", "feature", "scanner", "status", "findings"],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "feature": { "type": "string" },
+        "scanner": { "type": "string" },
+        "status": { "enum": ["ran", "fallback", "skipped"] },
+        "tool_version": { "type": ["string", "null"] },
+        "generated_at": { "type": "string" },
+        "message": { "type": ["string", "null"] },
+        "findings": { "$ref": "#/definitions/findings" }
+      }
+    }
+  ],
+  "definitions": {
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["scanner", "rule", "severity", "file", "line", "message"],
+        "properties": {
+          "scanner": { "type": "string" },
+          "rule": { "type": "string" },
+          "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+          "confidence": { "enum": ["confirmed", "likely", "needs-verification"] },
+          "file": { "type": "string" },
+          "line": { "type": "integer", "minimum": 1 },
+          "message": { "type": "string" },
+          "remediation": { "type": ["string", "null"] },
+          "url": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}
