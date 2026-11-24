@@ -1,0 +1,32 @@
+# Aggregation checklist: {{FEATURE}} / {{STAGE}}
+
+Lead-only. Do not delegate this checklist to a slice subagent.
+
+## 1. Deterministic fan-in
+- [ ] `python scripts/sdlc.py slices check --feature {{FEATURE}} --stage {{STAGE}}` passes (0 fail).
+- [ ] Review `report.md`; every slice is `ok` or its warnings are explained.
+- [ ] Re-plan if a requirements slice changed: `sdlc slices plan ... --force`.
+
+## 2. Shared consistency
+- [ ] Read `*-notes.md` files only; do not re-read every output unless a conflict is reported.
+- [ ] Deduplicate shared tables/entities/components; keep one definition in the design overview.
+- [ ] Assign ADR numbers to proposals; move accepted ADRs to `docs/adr/NNNN-<title>.md`.
+- [ ] Reconcile naming, NFR targets, error contracts, and shared auth/authorization decisions.
+- [ ] Resolve cross-slice dependencies; add missing `depends_on` and reflect it in the backlog.
+
+## 3. Traceability
+- [ ] `bash skills/sdlc-session-handoff/scripts/backlog-to-graph.sh --file <slice-backlog> --apply` for each slice.
+- [ ] `bash skills/sdlc-session-handoff/scripts/sdlc-graph.sh gaps` shows no uncovered requirements.
+- [ ] Every slice REQ-ID maps to a design section and at least one backlog item.
+- [ ] Open questions are recorded with owners; no invented answers.
+
+## 4. Gates and memory
+- [ ] Human review per slice (parallelism never skips approval).
+- [ ] Lead checkpoints each slice: `sdlc checkpoint --feature {{FEATURE}} --slice <slug> --gate {{STAGE}}=approved --artifact <output>`.
+- [ ] Commit updated requirements index, design/security/backlog artifacts, and `.sdlc/`.
+- [ ] Push backlogs only after approval: `push-backlog.sh --dry-run` then apply.
+
+## 5. Done
+- [ ] `req-index.sh validate --feature {{FEATURE}}` passes.
+- [ ] `sdlc verify` passes for the feature.
+- [ ] `sdlc-state.sh resume` points at the next action for the human reviewer.

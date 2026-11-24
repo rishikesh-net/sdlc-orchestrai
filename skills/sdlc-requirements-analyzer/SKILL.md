@@ -76,3 +76,6 @@ Never rewrite requirement wording during a split. The script copies lines verbat
   This records the slice's content hash; later `resume` and `req-index.sh stale --feature <slug>` flag any slice edited after approval so its design and backlog get re-reviewed.
 - Record requirements in the graph: Mode A: `sdlc-graph.sh add-entity --id REQ-001 --kind requirement --source <file>`. Mode B/C: `req-index.sh to-graph --feature <slug> --apply` (creates slice and requirement entities and `part_of` links).
 - When all slices are approved: checkpoint `--phase design --next "Run sdlc-system-design, one slice at a time"`.
+- Requirements authoring stays sequential (boundaries and IDs must stay consistent). Once slices are approved, the lead may fan out downstream
+  design, threat-model, or backlog work: `python scripts/sdlc.py slices plan --feature <slug> --stage design` and `sdlc slices check`. Subagents
+  must not edit the pack or `index.json`; see `skills/sdlc-session-handoff/references/parallel-orchestration.md`.

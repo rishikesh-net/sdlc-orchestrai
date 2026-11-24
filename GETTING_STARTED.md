@@ -263,7 +263,22 @@ Typical prompts:
 > Security review the payments slice.
 
 Each skill writes per-slice artifacts (`docs/design/<feature>/<slice>.md`, `docs/backlog/<feature>/<slice>-backlog.json`, `docs/security/<feature>/<slice>-threats.md`)
-and checkpoints with `--slice`. Create GitHub issues per slice file with `push-backlog.sh` (dry-run first); slice epics can be pushed independently, in dependency order.
+and checkpoints with `--slice`. Create tickets per slice file with `push-backlog.sh` (dry-run first); slice epics can be pushed independently, in dependency order.
+
+### C2. Parallel slice processing (optional)
+Once slices are approved, the lead agent can fan out per-slice design, threat-model, or backlog work:
+
+```bash
+python scripts/sdlc.py slices plan  --feature billing --stage design --max-parallel 3
+# dispatch one agent per work order in .sdlc/parallel/billing/design/, then:
+python scripts/sdlc.py slices check --feature billing --stage design
+```
+
+`plan` skips slices without approved prerequisites and writes scoped work orders plus a manifest. Subagents
+write only their assigned outputs and notes; they must not touch `.sdlc/state.json`, `index.json`, shared docs, or
+tickets. The lead runs `check`, reconciles shared models/ADR proposals, gets human review, and checkpoints each
+slice. Requirements authoring stays sequential. Client-specific dispatch patterns are in
+`skills/sdlc-session-handoff/references/parallel-orchestration.md`.
 
 ### D. Keep the pack healthy
 | Task | Command |

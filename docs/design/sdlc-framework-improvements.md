@@ -208,4 +208,7 @@ flowchart TD
   - [x] `.sdlc/reports/<feature>-findings.sarif` (SARIF 2.1.0) + `<feature>-findings.json` (`.sdlc/schema/findings.schema.json`).
   - [x] Labeled heuristic fallbacks for secrets and SAST; missing tools recorded as `ran`/`fallback`/`skipped`.
   - [x] Non-blocking `scans` job uploads SARIF to GitHub Code Scanning.
-- [ ] Provide workflow templates for parallel slice processing via agent swarms.
+- [x] Provide workflow templates for parallel slice processing via agent swarms.
+  - [x] Deterministic fan-out/fan-in: `sdlc slices plan|show|check` with per-slice work orders and a manifest.
+  - [x] Scoped subagent contract (no state/index/shared-doc/ticket writes) + lead-only aggregation and per-slice gates.
+  - [x] Client-native templates (Claude Code subagents, OpenCode tasks, Antigravity `run_workflow`, Copilot/Cursor sequential fallback).

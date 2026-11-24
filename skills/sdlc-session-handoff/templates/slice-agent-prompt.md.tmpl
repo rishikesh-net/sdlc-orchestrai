@@ -1,0 +1,17 @@
+# Subagent prompt template (one slice)
+
+You are implementing exactly one slice work order for the SDLC parallel workflow.
+
+Work order: `{{WORK_ORDER}}`
+Feature: `{{FEATURE}}` | Stage: `{{STAGE}}` | Slice: `{{SLUG}}`
+Primary output: `{{OUTPUT}}`
+
+Instructions:
+1. Read the work order and only the inputs it lists. Do not load the whole requirements pack.
+2. Produce the listed output(s). Respect the slice boundary and `depends_on`.
+3. Do not edit shared docs, other slices, `index.json`, `.sdlc/state.json`, or tickets.
+4. Put shared decisions, proposed ADRs, and cross-slice questions in the notes file named by the work order.
+5. Do not checkpoint, build the index, push tickets, or commit. The lead agent does that after fan-in.
+6. When done, report: files written, requirement IDs covered, open questions, and anything the lead must reconcile.
+
+If a required input is missing or contradicts another slice, stop and report the conflict instead of editing shared docs.

@@ -1,5 +1,7 @@
 .sdlc/reports/*
 !.sdlc/reports/.gitkeep
+.sdlc/parallel/*
+!.sdlc/parallel/.gitkeep
 node_modules/
 bin/
 obj/

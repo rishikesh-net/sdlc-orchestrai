@@ -88,3 +88,8 @@ Scope: <branch/PR/paths>   Date: <date>   Verdict: <Block | Fix before merge | M
 For a requirements pack, threat-model per slice plus once for the whole feature: read `nfr.md` and the overview of `docs/design/<feature>/` for cross-cutting
 controls and trust boundaries, then load each slice's design section only when reviewing that slice. Save per-slice results as
 `docs/security/<feature>/<slice>-threats.md`, and checkpoint with `--slice <slice> --gate threat-model=in-review`.
+Optional parallel threat modeling: after the design overview and per-slice design exist, the lead can run
+`python scripts/sdlc.py slices plan --feature <feature> --stage threat-model`, dispatch one agent per work order,
+then `sdlc slices check --feature <feature> --stage threat-model` (checks unique `T-###` IDs and required sections).
+Subagents must treat shared architecture as read-only and record cross-slice threats in their notes file for the lead.
+See `skills/sdlc-session-handoff/references/parallel-orchestration.md`.

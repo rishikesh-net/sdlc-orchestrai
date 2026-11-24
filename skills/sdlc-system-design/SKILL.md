@@ -56,3 +56,8 @@ If the requirements are a pack (`docs/requirements/<feature>/` with `00-index.md
 4. Gate per slice: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh checkpoint --client <your-client> --feature <feature> --phase design --slice <slice> --gate design=in-review --artifact docs/design/<feature>/<slice>.md`.
    Run `bash skills/sdlc-requirements-analyzer/scripts/req-index.sh stale --feature <feature>`: if a slice changed after approval, re-review its design before continuing.
 5. Record slice-to-design links in the graph (`DS-<slice> covers REQ-...`).
+6. Optional parallel design: after `00-overview.md` exists and slices are approved, the lead can run
+   `python scripts/sdlc.py slices plan --feature <feature> --stage design`, dispatch one agent per work order,
+   then `sdlc slices check --feature <feature> --stage design`. Subagents write only `docs/design/<feature>/<slice>.md`
+   and their notes file; proposed ADRs go in the notes file and the lead assigns numbers during aggregation.
+   See `skills/sdlc-session-handoff/references/parallel-orchestration.md`.
