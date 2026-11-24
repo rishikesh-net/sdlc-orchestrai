@@ -59,6 +59,7 @@ PHASES = [
     "backlog",
     "issues",
     "build",
+    "implementation",
     "security-review",
     "done",
 ]
@@ -444,6 +445,208 @@ def verify_backlog(feature: Optional[str] = None) -> List[Dict[str, Any]]:
     return findings
 
 
+def verify_implementation() -> List[Dict[str, Any]]:
+    """Validate active implementation branch, working tree, and test files."""
+    findings = []
+    # Check current branch
+    code, branch, _ = run_cmd(["git", "branch", "--show-current"])
+    if code == 0:
+        if branch.startswith("feat/") or branch.startswith("feature/"):
+            findings.append({"level": "ok", "file": f"git:branch({branch})", "message": f"Active feature branch: {branch}"})
+        elif branch in ["main", "master"]:
+            findings.append({"level": "warn", "file": f"git:branch({branch})", "message": "Currently on default branch; story implementation should occur on feat/* branch"})
+        else:
+            findings.append({"level": "ok", "file": f"git:branch({branch})", "message": f"Working branch: {branch}"})
+
+    # Check git dirty status
+    code, dirty_out, _ = run_cmd(["git", "status", "--porcelain"])
+    dirty_lines = [l for l in dirty_out.splitlines() if not (".sdlc/" in l or ".sdlc\\" in l)]
+    if dirty_lines:
+        findings.append({"level": "warn", "file": "git:working-tree", "message": f"{len(dirty_lines)} uncommitted file(s) in working tree"})
+    else:
+        findings.append({"level": "ok", "file": "git:working-tree", "message": "Working tree clean"})
+
+    # Check for test files in repo
+    test_files = list(ROOT.rglob("*Tests.cs")) + list(ROOT.rglob("*Test.cs")) + \
+                 list(ROOT.rglob("*.test.ts")) + list(ROOT.rglob("*.test.tsx")) + \
+                 list(ROOT.rglob("*.spec.ts")) + list(ROOT.rglob("*.spec.tsx"))
+    test_files = [f for f in test_files if not any(part.startswith(".") for part in f.parts)]
+    if test_files:
+        findings.append({"level": "ok", "file": "tests", "message": f"Found {len(test_files)} test file(s) in repository"})
+    else:
+        findings.append({"level": "warn", "file": "tests", "message": "No test files detected (*Tests.cs, *.test.ts(x), *.spec.ts(x))"})
+
+    return findings
+
+
+def find_story(story_id: str, feature: Optional[str] = None) -> Tuple[Optional[Dict[str, Any]], Optional[str], Optional[Path]]:
+    """Find a story by ID across backlog files or templates."""
+    backlog_dir = ROOT / "docs" / "backlog"
+    candidates = []
+    if feature:
+        bf = backlog_dir / f"{feature}-backlog.json"
+        if bf.is_file():
+            candidates.append(bf)
+    else:
+        if backlog_dir.is_dir():
+            candidates.extend(sorted(backlog_dir.glob("*-backlog.json")))
+
+    example_bf = ROOT / "skills" / "sdlc-backlog-breakdown" / "templates" / "backlog.example.json"
+    if example_bf.is_file() and example_bf not in candidates:
+        candidates.append(example_bf)
+
+    for cf in candidates:
+        try:
+            with open(cf, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            feat_name = data.get("feature", cf.stem.replace("-backlog", ""))
+            for item in data.get("items", []):
+                if item.get("id", "").lower() == story_id.lower():
+                    return item, feat_name, cf
+        except Exception:
+            continue
+
+    return None, None, None
+
+
+def cmd_story_show(story_id: str, feature: Optional[str] = None, json_output: bool = False) -> int:
+    """Display story details, acceptance criteria, requirement refs, and design links."""
+    story, feat_name, path = find_story(story_id, feature)
+    if not story:
+        print(f"ERROR: Story '{story_id}' not found in backlog files.", file=sys.stderr)
+        return 1
+
+    if json_output:
+        print(json.dumps({"feature": feat_name, "story": story}, indent=2))
+        return 0
+
+    print("\n========================================================")
+    print(f" Story: {story.get('id')} - {story.get('title')}")
+    print(f" Feature: {feat_name} | Type: {story.get('type')} | Estimate: {story.get('estimate', 'N/A')} pts | Priority: {story.get('priority', 'N/A')}")
+    print("========================================================\n")
+
+    if story.get("user_story"):
+        print(f" User Story:\n   {story.get('user_story')}\n")
+
+    acs = story.get("acceptance_criteria", [])
+    if acs:
+        print(" Acceptance Criteria:")
+        for idx, ac in enumerate(acs, 1):
+            print(f"   {idx}. {ac}")
+        print()
+
+    reqs = story.get("req_refs", [])
+    if reqs:
+        print(f" Requirement Refs : {', '.join(reqs)}")
+
+    dref = story.get("design_ref")
+    if dref:
+        print(f" Design Reference : {dref}")
+
+    ext = story.get("external", {})
+    if ext and ext.get("key"):
+        print(f" Tracker Issue    : {ext.get('key')} ({ext.get('url', '')})")
+
+    deps = story.get("depends_on", [])
+    if deps:
+        print(f" Depends On       : {', '.join(deps)}")
+
+    print("\n--------------------------------------------------------")
+    return 0
+
+
+def cmd_story_start(story_id: str, feature: Optional[str] = None) -> int:
+    """Start implementation of a story: create feature branch and record checkpoint."""
+    story, feat_name, path = find_story(story_id, feature)
+    if not story:
+        print(f"ERROR: Story '{story_id}' not found in backlog files.", file=sys.stderr)
+        return 1
+
+    title = story.get("title", "")
+    slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:30]
+
+    ext = story.get("external", {})
+    issue_num = ext.get("key", "").lstrip("#")
+    prefix = issue_num if issue_num else story.get("id", "").lower()
+    branch_name = f"feat/{prefix}-{slug}"
+
+    print(f"Starting implementation for Story {story.get('id')} ({title})")
+    print(f"Target branch: {branch_name}")
+
+    # Check git status
+    code, dirty_out, _ = run_cmd(["git", "status", "--porcelain"])
+    dirty_lines = [l for l in dirty_out.splitlines() if not (".sdlc/" in l or ".sdlc\\" in l)]
+    if dirty_lines:
+        print(f"NOTE: Working tree has {len(dirty_lines)} uncommitted change(s).")
+
+    # Checkout branch
+    code_co, out_co, err_co = run_cmd(["git", "checkout", "-b", branch_name])
+    if code_co != 0:
+        code_sw, _, _ = run_cmd(["git", "checkout", branch_name])
+        if code_sw == 0:
+            print(f"Switched to existing branch: {branch_name}")
+        else:
+            print(f"NOTE: Git branch create notice: {err_co or out_co}")
+    else:
+        print(f"Created and checked out: {branch_name}")
+
+    # Record checkpoint in state.json
+    cmd_checkpoint(
+        feature=feat_name or "feature",
+        phase="build",
+        branch=branch_name,
+        note=f"Started story {story.get('id')}: {title}",
+        next_action=f"Scaffold tests for {story.get('id')} acceptance criteria, then implement code."
+    )
+    return 0
+
+
+def cmd_story_pr_body(story_id: str, feature: Optional[str] = None, output_file: Optional[str] = None) -> int:
+    """Generate markdown PR description populated from story metadata."""
+    story, feat_name, path = find_story(story_id, feature)
+    if not story:
+        print(f"ERROR: Story '{story_id}' not found in backlog files.", file=sys.stderr)
+        return 1
+
+    ext = story.get("external", {})
+    issue_num = ext.get("key", "")
+    closes_str = f"Closes {issue_num}" if issue_num else f"Refs Story `{story.get('id')}`"
+
+    acs = story.get("acceptance_criteria", [])
+    ac_checklist = "\n".join(f"- [x] {ac}" for ac in acs) if acs else "- [ ] Acceptance criteria satisfied"
+
+    reqs = story.get("req_refs", [])
+    dref = story.get("design_ref", "docs/design/")
+    if reqs:
+        rows = "\n".join(f"| {r} | `{dref}` | Unit & integration tests |" for r in reqs)
+    else:
+        rows = f"| N/A | `{dref}` | Unit tests |"
+
+    tmpl_path = ROOT / "skills" / "sdlc-feature-implementer" / "templates" / "pr-description.md.tmpl"
+    if tmpl_path.is_file():
+        body = tmpl_path.read_text(encoding="utf-8")
+        body = body.replace("${CLOSES_ISSUE}", closes_str)
+        body = body.replace("${STORY_ID}", story.get("id", "E1-S1"))
+        body = body.replace("${STORY_TITLE}", story.get("title", ""))
+        body = body.replace("${FEATURE}", feat_name or "feature")
+        body = body.replace("${TRACEABILITY_ROWS}", rows)
+        body = body.replace("${AC_CHECKLIST}", ac_checklist)
+    else:
+        body = f"## Summary\n{closes_str}\nImplements Story: `{story.get('id')}` - {story.get('title')}\n\n## Acceptance Criteria\n{ac_checklist}\n"
+
+    if output_file:
+        out_p = Path(output_file)
+        if not out_p.is_absolute():
+            out_p = ROOT / out_p
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(body, encoding="utf-8")
+        print(f"Generated PR description -> {out_p.relative_to(ROOT) if out_p.is_relative_to(ROOT) else out_p}")
+    else:
+        print(body)
+
+    return 0
+
+
 def verify_gate(gate: Optional[str] = None, feature: Optional[str] = None, json_output: bool = False) -> int:
     """Run gate verification checks."""
     all_findings = []
@@ -453,6 +656,9 @@ def verify_gate(gate: Optional[str] = None, feature: Optional[str] = None, json_
 
     if not gate or gate in ["backlog", "all"]:
         all_findings.extend(verify_backlog(feature))
+
+    if not gate or gate in ["implementation", "all"]:
+        all_findings.extend(verify_implementation())
 
     if json_output:
         has_fail = any(f["level"] == "fail" for f in all_findings)
@@ -888,9 +1094,30 @@ def main():
 
     # verify
     p_verify = subparsers.add_parser("verify", help="Run pre-flight gate verification on artifacts")
-    p_verify.add_argument("--gate", choices=["requirements", "design", "backlog", "all"], default="all", help="Target gate")
+    p_verify.add_argument("--gate", choices=["requirements", "design", "backlog", "implementation", "all"], default="all", help="Target gate")
     p_verify.add_argument("--feature", help="Target feature name")
     p_verify.add_argument("--json", action="store_true", help="Output findings in JSON format")
+
+    # story
+    p_story = subparsers.add_parser("story", help="Manage story implementation lifecycle")
+    story_subs = p_story.add_subparsers(dest="story_action", help="Story action")
+
+    # story show
+    p_s_show = story_subs.add_parser("show", help="Show story details and acceptance criteria")
+    p_s_show.add_argument("story_id", help="Story ID (e.g. E1-S1)")
+    p_s_show.add_argument("--feature", help="Feature name (optional)")
+    p_s_show.add_argument("--json", action="store_true", help="Output in JSON format")
+
+    # story start
+    p_s_start = story_subs.add_parser("start", help="Checkout branch and begin implementation")
+    p_s_start.add_argument("story_id", help="Story ID (e.g. E1-S1)")
+    p_s_start.add_argument("--feature", help="Feature name (optional)")
+
+    # story pr-body
+    p_s_pr = story_subs.add_parser("pr-body", help="Generate markdown PR description for story")
+    p_s_pr.add_argument("story_id", help="Story ID (e.g. E1-S1)")
+    p_s_pr.add_argument("--feature", help="Feature name (optional)")
+    p_s_pr.add_argument("--output", help="Output file path (optional)")
 
     # resume
     p_resume = subparsers.add_parser("resume", help="Resume session and print handoff state")
@@ -933,6 +1160,16 @@ def main():
         sys.exit(check_env(json_output=args.json, strict=args.strict))
     elif args.subcommand == "verify":
         sys.exit(verify_gate(gate=args.gate, feature=args.feature, json_output=args.json))
+    elif args.subcommand == "story":
+        if args.story_action == "show":
+            sys.exit(cmd_story_show(story_id=args.story_id, feature=args.feature, json_output=args.json))
+        elif args.story_action == "start":
+            sys.exit(cmd_story_start(story_id=args.story_id, feature=args.feature))
+        elif args.story_action == "pr-body":
+            sys.exit(cmd_story_pr_body(story_id=args.story_id, feature=args.feature, output_file=args.output))
+        else:
+            p_story.print_help()
+            sys.exit(1)
     elif args.subcommand == "resume":
         sys.exit(cmd_resume(client=args.client))
     elif args.subcommand == "checkpoint":

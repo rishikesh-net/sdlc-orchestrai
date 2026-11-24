@@ -19,9 +19,9 @@ Requirement
   -> sdlc-system-design          -> docs/design/<feature>.md + ADRs           [review]
      + sdlc-security-review (Mode A: threat model)                             [review]
   -> sdlc-backlog-breakdown      -> docs/backlog/<feature>-backlog.md + .json [review]
-  -> push-backlog.sh --dry-run, then the real run                         [review]
-  -> implementation (branch + PR)
-  -> sdlc-security-review (Mode B) + CI scans                                  [review]
+  -> push-backlog.sh --dry-run, then the real run                              [review]
+  -> sdlc-feature-implementer    -> branch + TDD tests + code + draft PR       [review]
+  -> sdlc-security-review (Mode B: diff/PR review) + CI scans                 [review]
   -> merge
 ```
 
@@ -31,14 +31,14 @@ Never skip a gate. Never start a later phase on an unapproved earlier artifact.
 - Single file up to about 40 requirements or 400 lines. Above that, use a pack of vertical slices (`sdlc-requirements-analyzer`, modes B and C).
 - Pack IDs are slice-prefixed (`REQ-PREF-001`); small single-file features keep global IDs (`REQ-001`).
 - Never load a whole pack into context. Read `00-index.md`, then one slice (`req-index.sh show --feature F --slice S` or `--id REQ-ID`).
-- Design, backlog, and security work run one slice at a time; approvals are per slice (`sdlc-state.sh checkpoint --slice S`).
+- Design, backlog, and security work run one slice at a time; approvals are per slice (`sdlc-state.sh checkpoint --slice S` or `sdlc checkpoint --slice S`).
 - An existing large document is split with `req-index.sh analyze | skeleton | split`: verbatim, with a coverage check; never rewrite requirement wording during a split.
 
 ## Session protocol (shared memory across clients)
 Project memory lives in the repo so any client (Claude Code, Copilot, Cursor, OpenCode, Antigravity) can continue where another stopped.
-1. **Start of every session:** run `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh resume`. Continue from the recorded next action. Do not
+1. **Start of every session:** run `sdlc resume` (or `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh resume`). Continue from the recorded next action. Do not
    rescan the repo; re-read only files the output lists as changed. Do not redo an approved gate.
-2. **At every approval gate and before ending a session:** run `sdlc-state.sh checkpoint` (pass `--client <your-client>`), then commit `.sdlc/`.
+2. **At every approval gate and before ending a session:** run `sdlc checkpoint` (or `sdlc-state.sh checkpoint`), then commit `.sdlc/`.
 3. **Codebase map and graph:** use `.sdlc/memory/codebase-map.md` (refresh incrementally with `map-status` / `map-stamp`) and `sdlc-graph.sh` for traceability.
 4. Memory is a hint, not truth. Verify against the repo when the commit differs. Never store secrets or personal data in it. Never hand-edit generated files.
 
@@ -48,6 +48,7 @@ Project memory lives in the repo so any client (Claude Code, Copilot, Cursor, Op
 | `sdlc-requirements-analyzer` | A feature idea, ticket, or request needs to become structured, testable requirements |
 | `sdlc-system-design` | Approved requirements need architecture, data model, API contracts, NFRs, ADRs |
 | `sdlc-backlog-breakdown` | An approved design must become epics, stories, tasks, spikes, and GitHub issues |
+| `sdlc-feature-implementer` | An approved backlog story or GitHub issue needs implementation (branch, test scaffold, code, PR draft) |
 | `sdlc-security-review` | Threat modeling a design, or reviewing a diff/PR/codebase for vulnerabilities |
 | `sdlc-session-handoff` | Start of every session, every approval gate, and client switches: resume from, and checkpoint to, shared memory |
 

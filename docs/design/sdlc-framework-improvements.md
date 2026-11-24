@@ -187,16 +187,17 @@ flowchart TD
 
 ### Phase 1: Foundations & Portability (Immediate High-Value Wins)
 - [x] Save framework improvement plan to `docs/design/sdlc-framework-improvements.md`.
-- [ ] Implement `scripts/sdlc.py` and universal wrappers (`sdlc` and `sdlc.cmd`).
-- [ ] Implement `sdlc check-env` diagnostic (with aliases `check`, `doctor`, `preflight`).
-- [ ] Implement `sdlc verify` pre-flight gate check for requirements, design, and backlog schemas.
-- [ ] Update `scripts/sync-skills.sh` and sync with client folders (`.agent`, `.claude`, `.cursor`, `.opencode`, `.github`).
+- [x] Implement `scripts/sdlc.py` and universal wrappers (`sdlc` and `sdlc.cmd`).
+- [x] Implement `sdlc check-env` diagnostic (with aliases `check`, `doctor`, `preflight`).
+- [x] Implement `sdlc verify` pre-flight gate check for requirements, design, and backlog schemas.
+- [x] Update `scripts/sync-skills.sh` and sync with client folders (`.agent`, `.claude`, `.cursor`, `.opencode`, `.github`).
 
 ### Phase 2: Lifecycle Completion (Bridging Backlog to PR)
-- [ ] Create `skills/sdlc-feature-implementer/` with `SKILL.md`, references, and PR templates.
-- [ ] Define story execution protocol (branch -> test scaffold -> implementation -> local verify -> draft PR).
-- [ ] Connect `sdlc-state.sh` checkpointing to support the implementation gate.
-- [ ] Update `AGENTS.md` delivery chain diagram and guidelines.
+- [x] Create `skills/sdlc-feature-implementer/` with `SKILL.md`, references, and PR templates.
+- [x] Define story execution protocol (branch -> test scaffold -> implementation -> local verify -> draft PR).
+- [x] Connect `sdlc` CLI and checkpointing to support the implementation gate.
+- [x] Update `AGENTS.md` delivery chain diagram and guidelines.
+- [x] Update `README.md` and `GETTING_STARTED.md` with complete Phase 1 and Phase 2 workflows.
 
 ### Phase 3: Enterprise Extensibility & Advanced Orchestration
 - [ ] Abstract tracker logic into `adapters/` (GitHub, Jira, Linear, Local Markdown).
