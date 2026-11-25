@@ -21,15 +21,11 @@
         "skills/sdlc-feature-implementer/SKILL.md",
         "skills/sdlc-security-review/references/sarif.md",
         "skills/sdlc-security-review/scripts/sarif.py",
-        "skills/sdlc-session-handoff/references/parallel-orchestration.md"
+        "skills/sdlc-session-handoff/references/parallel-orchestration.md",
+        "skills/sdlc-session-handoff/scripts/sdlc-state.sh"
       ],
       "open_questions": [],
       "notes": [
-        {
-          "at": "2026-11-24T16:44:43Z",
-          "by": "opencode",
-          "text": "Phase 3 item 3B implemented: SARIF 2.1.0 + normalized findings, labeled heuristic fallbacks, scan-all + sdlc scan, non-blocking CI upload, converter tests"
-        },
         {
           "at": "2026-11-24T17:09:22Z",
           "by": "opencode",
@@ -49,15 +45,21 @@
           "at": "2026-11-25T13:46:25Z",
           "by": "opencode",
           "text": "CI fix: security.yml now auto-detects CodeQL languages (detect job + dynamic matrix), analyzes without uploading (upload:false + output), saves SARIF as artifacts, makes Code Scanning uploads non-fatal on private/no-GHAS repos, and installs semgrep for real SAST; docs synced"
+        },
+        {
+          "at": "2026-11-25T14:02:02Z",
+          "by": "opencode",
+          "text": "CI fix PR #2 green: security.yml auto-detects CodeQL languages, uploads non-fatal + SARIF artifacts, semgrep SAST; also fixed gitleaks pull-requests:read permission on PR events and aligned sdlc-state.sh PHASES with the Python runner (implementation). All checks pass."
         }
       ],
       "updated_by": "opencode",
-      "updated_at": "2026-11-25T13:46:25Z",
-      "next_action": "Commit and open PR for CI fix"
+      "updated_at": "2026-11-25T14:02:02Z",
+      "next_action": "Review and merge PR #2",
+      "branch": "fix/ci-security-workflow"
     }
   },
   "updated_by": "opencode",
-  "updated_at": "2026-11-25T13:46:25Z",
-  "repo_sha": "298d9f2",
+  "updated_at": "2026-11-25T14:02:02Z",
+  "repo_sha": "d03eaa7",
   "repo_dirty": true
 }
