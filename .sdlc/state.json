@@ -27,11 +27,6 @@
       "open_questions": [],
       "notes": [
         {
-          "at": "2026-11-24T17:09:22Z",
-          "by": "opencode",
-          "text": "Tuned heuristic SAST: app-source allowlist, case-sensitive SQL concat rule, SDLC_SCAN_ROOT override, POSIX integration test; framework-repo false positives resolved"
-        },
-        {
           "at": "2026-11-24T17:37:14Z",
           "by": "opencode",
           "text": "Phase 3 item 3A implemented: adapter contract, GitHub parity, local Markdown tracker, tracker precedence, CRLF-safe jq helpers, graph external_key handling, docs and tests"
@@ -50,16 +45,21 @@
           "at": "2026-11-25T14:02:02Z",
           "by": "opencode",
           "text": "CI fix PR #2 green: security.yml auto-detects CodeQL languages, uploads non-fatal + SARIF artifacts, semgrep SAST; also fixed gitleaks pull-requests:read permission on PR events and aligned sdlc-state.sh PHASES with the Python runner (implementation). All checks pass."
+        },
+        {
+          "at": "2026-11-25T14:53:10Z",
+          "by": "opencode",
+          "text": "PR #2 merged via merge commit 646fdd1 (security workflow green on private repo without GHAS). Branch fix/ci-security-workflow deleted locally and remotely; main synced to origin/main."
         }
       ],
       "updated_by": "opencode",
-      "updated_at": "2026-11-25T14:02:02Z",
-      "next_action": "Review and merge PR #2",
-      "branch": "fix/ci-security-workflow"
+      "updated_at": "2026-11-25T14:53:10Z",
+      "next_action": "Phase 3 wrap-up: PR #2 merged; optional Jira/Linear/Azure DevOps adapters, or CI hardening (pin semgrep, tighten JS/TS detection)",
+      "branch": "main"
     }
   },
   "updated_by": "opencode",
-  "updated_at": "2026-11-25T14:02:02Z",
-  "repo_sha": "d03eaa7",
+  "updated_at": "2026-11-25T14:53:10Z",
+  "repo_sha": "646fdd1",
   "repo_dirty": true
 }
