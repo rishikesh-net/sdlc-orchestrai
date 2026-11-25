@@ -198,8 +198,6 @@ def check_env(json_output: bool = False, strict: bool = False) -> int:
     expected_schemas = [
         "backlog.schema.json",
         "findings.schema.json",
-        "graph.schema.json",
-        "parallel-manifest.schema.json",
         "requirements-index.schema.json",
         "split-plan.schema.json",
         "state.schema.json",
@@ -455,6 +453,73 @@ def verify_backlog(feature: Optional[str] = None) -> List[Dict[str, Any]]:
         else:
             findings.append({"level": "ok", "file": rel_path, "message": f"Backlog valid: {len(items)} items"})
 
+        # Cross-document REQ-ID coverage check against requirements
+        req_file = ROOT / "docs" / "requirements" / f"{feat_name}.md"
+        if req_file.is_file():
+            req_ids = set(re.findall(r"\b(REQ-(?:[A-Z0-9]+-)?\d{3})\b", req_file.read_text(encoding="utf-8", errors="replace")))
+            covered_reqs = set()
+            for item in items:
+                for ref in item.get("req_refs", []) or []:
+                    covered_reqs.add(ref)
+            uncovered = sorted(req_ids - covered_reqs)
+            if uncovered:
+                findings.append({"level": "fail", "file": rel_path, "message": f"Uncovered requirement IDs missing from backlog req_refs: {', '.join(uncovered)}"})
+            elif req_ids:
+                findings.append({"level": "ok", "file": rel_path, "message": f"All {len(req_ids)} requirement ID(s) covered by backlog items"})
+
+    return findings
+
+
+def verify_design(feature: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Validate design documents: existence, REQ-ID coverage, and core sections."""
+    findings = []
+    design_dir = ROOT / "docs" / "design"
+    req_dir = ROOT / "docs" / "requirements"
+    if not design_dir.is_dir():
+        return findings
+
+    if feature:
+        candidates = [feature]
+    else:
+        candidates = []
+        if req_dir.is_dir():
+            for rf in sorted(req_dir.glob("*.md")):
+                if (design_dir / rf.name).is_file():
+                    candidates.append(rf.stem)
+
+    for feat in candidates:
+        dfile = design_dir / f"{feat}.md"
+        if not dfile.is_file():
+            findings.append({"level": "fail", "file": f"docs/design/{feat}.md", "message": f"Design document for '{feat}' not found"})
+            continue
+
+        rel_path = str(dfile.relative_to(ROOT))
+        content = dfile.read_text(encoding="utf-8", errors="replace")
+
+        rfile = req_dir / f"{feat}.md"
+        if rfile.is_file():
+            req_ids = set(re.findall(r"\b(REQ-(?:[A-Z0-9]+-)?\d{3})\b", rfile.read_text(encoding="utf-8", errors="replace")))
+            design_ids = set(re.findall(r"\b(REQ-(?:[A-Z0-9]+-)?\d{3})\b", content))
+            missing = sorted(req_ids - design_ids)
+            if missing:
+                findings.append({"level": "fail", "file": rel_path, "message": f"Requirement IDs not referenced in design: {', '.join(missing)}"})
+            elif req_ids:
+                findings.append({"level": "ok", "file": rel_path, "message": f"All {len(req_ids)} requirement ID(s) referenced in design"})
+
+        lower = content.lower()
+        missing_sections = [
+            label for label, keys in [
+                ("Architecture/Components", ("architecture", "component")),
+                ("Data Model/API", ("data model", "schema", "api")),
+                ("Risks/Rollback", ("risk", "rollback")),
+            ]
+            if not any(k in lower for k in keys)
+        ]
+        if missing_sections:
+            findings.append({"level": "warn", "file": rel_path, "message": f"Design missing recommended sections: {', '.join(missing_sections)}"})
+        else:
+            findings.append({"level": "ok", "file": rel_path, "message": "Design sections complete"})
+
     return findings
 
 
@@ -667,6 +732,9 @@ def verify_gate(gate: Optional[str] = None, feature: Optional[str] = None, json_
 
     if not gate or gate in ["requirements", "all"]:
         all_findings.extend(verify_requirements(feature))
+
+    if not gate or gate in ["design", "all"]:
+        all_findings.extend(verify_design(feature))
 
     if not gate or gate in ["backlog", "all"]:
         all_findings.extend(verify_backlog(feature))
@@ -1107,526 +1175,6 @@ def cmd_scan(feature: str, strict: bool = False) -> int:
     return proc.returncode
 
 
-# ---------------------------------------------------------------------------
-# Command: slices (parallel pack orchestration: fan-out work orders + fan-in checks)
-# ---------------------------------------------------------------------------
-
-SLICE_STAGES = ["design", "threat-model", "backlog"]
-SLICE_TEMPLATES = ROOT / "skills" / "sdlc-session-handoff" / "templates"
-SLICE_WORK_ORDER_TPL = SLICE_TEMPLATES / "slice-work-order.md.tmpl"
-
-DEFAULT_SLICE_WORK_ORDER = """# Slice work order: {{FEATURE}} / {{SLUG}}
-
-- Stage: `{{STAGE}}`
-- Slice: `{{SLUG}}` (prefix `{{PREFIX}}`, priority {{PRIORITY}}, status {{STATUS}})
-- Depends on: {{DEPENDS}}
-- Requirement IDs: {{REQ_IDS}}
-- Requirements slice: `{{SLICE_FILE}}`
-- Index (read first): `{{INDEX_FILE}}`
-- Cross-cutting NFRs: `{{NFR_FILE}}` (if present)
-- Glossary: `{{GLOSSARY_FILE}}` (if present)
-- Design overview (read-only): `{{OVERVIEW_FILE}}`
-- Notes file for shared decisions: `{{NOTES_FILE}}`
-
-## Outputs
-{{OUTPUTS}}
-
-## Rules
-1. Read only the files listed above; never load the whole pack.
-2. Do not edit other slices, shared docs, `index.json`, `.sdlc/state.json`, or tickets.
-3. Reference other slices and requirements by ID; never copy their text.
-4. If a shared model/decision is needed, write it to the notes file, not the shared docs.
-5. ADRs are proposals in the notes file; the lead assigns ADR numbers after fan-in.
-6. Do not checkpoint, commit, build the index, or push tickets; the lead does that.
-
-## Done criteria
-- Output exists at `{{PRIMARY_OUTPUT}}` and covers every requirement ID listed above.
-- Validation (run by the lead): `{{VALIDATION}}`
-{{WARNINGS}}
-"""
-
-
-class SlicesError(Exception):
-    """User-facing error while planning or checking slice orchestration."""
-
-
-def _rel(path: Path) -> str:
-    try:
-        return path.relative_to(ROOT).as_posix()
-    except ValueError:
-        return path.as_posix()
-
-
-def _sha16(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
-
-
-def _read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8", errors="replace")
-
-
-def _write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(text)
-
-
-def _render(template: str, values: Dict[str, Any]) -> str:
-    for key, value in values.items():
-        template = template.replace("{{" + key + "}}", str(value))
-    return template
-
-
-def _pack_context(feature: str) -> Tuple[Path, Dict[str, Any], Path]:
-    pack = ROOT / "docs" / "requirements" / feature
-    index_path = pack / "index.json"
-    if not index_path.is_file():
-        raise SlicesError(f"missing {_rel(index_path)}; run: req-index.sh build --feature {feature}")
-    try:
-        data = json.loads(_read_text(index_path))
-    except Exception as exc:  # noqa: BLE001
-        raise SlicesError(f"invalid {_rel(index_path)}: {exc}")
-    if data.get("feature") not in (None, feature):
-        raise SlicesError(f"{_rel(index_path)} belongs to feature '{data.get('feature')}', not '{feature}'")
-    return pack, data, index_path
-
-
-def _index_problems(pack: Path, index: Dict[str, Any]) -> List[str]:
-    problems = []
-    entries = list(index.get("slices") or []) + list(index.get("cross_cutting") or [])
-    for entry in entries:
-        rel = entry.get("file") or ""
-        path = pack / rel
-        if not path.is_file():
-            problems.append(f"{rel}: listed in index.json but missing")
-        elif entry.get("hash") and _sha16(path) != entry["hash"]:
-            problems.append(f"{rel}: changed since index.json was built")
-    return problems
-
-
-def _design_slice_file(feature: str, slug: str) -> Optional[Path]:
-    design_dir = ROOT / "docs" / "design" / feature
-    if not design_dir.is_dir():
-        return None
-    direct = design_dir / f"{slug}.md"
-    if direct.is_file():
-        return direct
-    for candidate in sorted(design_dir.glob(f"*-{slug}.md")):
-        if candidate.is_file():
-            return candidate
-    return None
-
-
-def _feature_gates(feature: str) -> Dict[str, str]:
-    if not STATE_FILE.is_file():
-        return {}
-    try:
-        data = json.loads(_read_text(STATE_FILE))
-    except Exception:  # noqa: BLE001
-        return {}
-    feat = (data.get("features") or {}).get(feature) or {}
-    gates = feat.get("gates") or {}
-    return gates if isinstance(gates, dict) else {}
-
-
-def _stage_outputs(feature: str, stage: str, slug: str) -> Dict[str, str]:
-    if stage == "design":
-        return {"design": f"docs/design/{feature}/{slug}.md"}
-    if stage == "threat-model":
-        return {"threat_model": f"docs/security/{feature}/{slug}-threats.md"}
-    if stage == "backlog":
-        return {
-            "backlog_json": f"docs/backlog/{feature}/{slug}-backlog.json",
-            "backlog_md": f"docs/backlog/{feature}/{slug}-backlog.md",
-        }
-    raise SlicesError(f"unknown stage '{stage}'")
-
-
-def _plan_slices(feature: str, stage: str, outdir: str, max_parallel: int,
-                 selected: Optional[List[str]], include_unapproved: bool) -> Tuple[Dict[str, Any], Dict[str, str]]:
-    if stage not in SLICE_STAGES:
-        raise SlicesError(f"--stage must be one of: {', '.join(SLICE_STAGES)}")
-    if max_parallel < 1:
-        raise SlicesError("--max-parallel must be >= 1")
-    pack, index, index_path = _pack_context(feature)
-    problems = _index_problems(pack, index)
-    if problems:
-        raise SlicesError(
-            "requirements index is stale or incomplete; run: req-index.sh build --feature "
-            f"{feature}\n  - " + "\n  - ".join(problems))
-
-    entries = index.get("slices") or []
-    if not entries:
-        raise SlicesError(f"no slices in {_rel(index_path)}; add slices first")
-
-    overview = ROOT / "docs" / "design" / feature / "00-overview.md"
-    if stage in ("design", "threat-model") and not overview.is_file():
-        raise SlicesError(
-            f"missing shared design overview {_rel(overview)}; write it first "
-            "(architecture, shared components, data ownership, cross-cutting NFRs)")
-
-    slugs = [str(e.get("slug", "")) for e in entries]
-    if selected:
-        unknown = sorted(set(selected) - set(slugs))
-        if unknown:
-            raise SlicesError(f"unknown slice(s): {', '.join(unknown)}")
-
-    gates = _feature_gates(feature)
-    planned: List[Dict[str, Any]] = []
-    orders: Dict[str, str] = {}
-    skipped: List[Dict[str, str]] = []
-    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    template = _read_text(SLICE_WORK_ORDER_TPL) if SLICE_WORK_ORDER_TPL.is_file() else DEFAULT_SLICE_WORK_ORDER
-
-    for position, entry in enumerate(entries, start=1):
-        slug = str(entry.get("slug", ""))
-        if selected and slug not in selected:
-            continue
-        title = str(entry.get("title") or slug)
-        prefix = str(entry.get("prefix") or "")
-        status = str(entry.get("status") or "")
-        req_ids = [str(x) for x in (entry.get("requirement_ids") or [])]
-        reasons: List[str] = []
-        warnings: List[str] = []
-
-        design_file = _design_slice_file(feature, slug)
-        if stage == "design":
-            if status != "approved":
-                reasons.append(f"requirements slice status is '{status or 'missing'}' (need approved)")
-        else:
-            if design_file is None:
-                reasons.append(f"design slice file not found (expected docs/design/{feature}/{slug}.md)")
-            gate = gates.get(f"design:{slug}")
-            if gate and gate != "approved":
-                reasons.append(f"design gate is '{gate}'")
-            elif not gate:
-                warnings.append(f"design gate not recorded in .sdlc/state.json; confirm design approval")
-
-        if reasons and not include_unapproved:
-            skipped.append({"slug": slug, "title": title, "reason": "; ".join(reasons)})
-            continue
-        if reasons:
-            warnings.append("WARNING: " + "; ".join(reasons))
-
-        outputs = _stage_outputs(feature, stage, slug)
-        work_order = f"{outdir}/{feature}/{stage}/{position:02d}-{slug}.md"
-        notes_file = f"{outdir}/{feature}/{stage}/{slug}-notes.md"
-        req_file = pack / str(entry.get("file") or "")
-        values = {
-            "FEATURE": feature,
-            "STAGE": stage,
-            "SLUG": slug,
-            "TITLE": title,
-            "PREFIX": prefix or "n/a",
-            "PRIORITY": str(entry.get("priority") or "n/a"),
-            "STATUS": status or "n/a",
-            "DEPENDS": ", ".join(str(x) for x in (entry.get("depends_on") or [])) or "none",
-            "REQ_IDS": ", ".join(req_ids) or "none",
-            "SLICE_FILE": _rel(req_file),
-            "INDEX_FILE": f"docs/requirements/{feature}/00-index.md",
-            "NFR_FILE": f"docs/requirements/{feature}/nfr.md",
-            "GLOSSARY_FILE": f"docs/requirements/{feature}/glossary.md",
-            "OVERVIEW_FILE": _rel(overview),
-            "DESIGN_FILE": _rel(design_file) if design_file else "n/a (run the design stage first)",
-            "OUTPUTS": "\n".join(f"- `{p}`" for p in outputs.values()),
-            "PRIMARY_OUTPUT": list(outputs.values())[0],
-            "NOTES_FILE": notes_file,
-            "VALIDATION": f"python scripts/sdlc.py slices check --feature {feature} --stage {stage}",
-            "MAX_PARALLEL": max_parallel,
-            "GENERATED_AT": now,
-            "WARNINGS": "\n".join(f"- {w}" for w in warnings) or "- none",
-        }
-        orders[slug] = _render(template, values)
-        planned.append({
-            "slug": slug,
-            "title": title,
-            "prefix": prefix,
-            "priority": str(entry.get("priority") or ""),
-            "status": status,
-            "depends_on": [str(x) for x in (entry.get("depends_on") or [])],
-            "requirements_file": _rel(req_file),
-            "requirement_ids": req_ids,
-            "design_file": _rel(design_file) if design_file else None,
-            "slice_hash": str(entry.get("hash") or ""),
-            "outputs": outputs,
-            "work_order": work_order,
-            "notes_file": notes_file,
-            "warnings": warnings,
-        })
-
-    manifest: Dict[str, Any] = {
-        "schema_version": 1,
-        "feature": feature,
-        "stage": stage,
-        "generated_at": now,
-        "max_parallel": max_parallel,
-        "prerequisites": {
-            "index": _rel(index_path),
-            "overview": _rel(overview) if overview.is_file() else None,
-            "gate_source": _rel(STATE_FILE) if STATE_FILE.is_file() else None,
-        },
-        "slices": planned,
-        "skipped": skipped,
-    }
-    if not planned:
-        raise SlicesError(
-            "no eligible slices for this stage"
-            + (": " + "; ".join(f"{s['slug']} ({s['reason']})" for s in skipped) if skipped else "")
-            + ("\nUse --include-unapproved to generate work orders anyway." if skipped else ""))
-    digest = hashlib.sha256("\n\n".join(orders[s["slug"]] for s in planned).encode("utf-8")).hexdigest()[:16]
-    manifest["work_order_hash"] = digest
-    return manifest, orders
-
-
-def cmd_slices_plan(feature: str, stage: str, outdir: str = ".sdlc/parallel",
-                    max_parallel: int = 3, selected: Optional[List[str]] = None,
-                    include_unapproved: bool = False, force: bool = False,
-                    dry_run: bool = False, json_output: bool = False) -> int:
-    try:
-        manifest, orders = _plan_slices(feature, stage, outdir, max_parallel, selected, include_unapproved)
-    except SlicesError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return 1
-
-    stage_dir = ROOT / outdir / feature / stage
-    existing = [s for s in manifest["slices"] if (ROOT / s["work_order"]).is_file()]
-    if existing and not force and not dry_run:
-        print("ERROR: work order(s) already exist; pass --force to regenerate:", file=sys.stderr)
-        for s in existing:
-            print(f"  - {s['work_order']}", file=sys.stderr)
-        return 2
-
-    if dry_run:
-        if json_output:
-            print(json.dumps(manifest, indent=2))
-        else:
-            print(f"Feature: {feature}   Stage: {stage}   Mode: DRY-RUN   Max parallel: {max_parallel}")
-            print(f"Output: {_rel(stage_dir)}\n")
-            print(f"{'#':<3} {'SLICE':<24} {'WORK ORDER':<52} PREREQ")
-            for i, s in enumerate(manifest["slices"], start=1):
-                prereq = "ok" if not s["warnings"] else "warn"
-                print(f"{i:<3} {s['slug']:<24} {s['work_order']:<52} {prereq}")
-            for s in manifest["skipped"]:
-                print(f"-   {s['slug']:<24} SKIPPED: {s['reason']}")
-            print("\nNo files were written.")
-        return 0
-
-    for s in manifest["slices"]:
-        _write_text(ROOT / s["work_order"], orders[s["slug"]])
-    _write_text(stage_dir / "manifest.json", json.dumps(manifest, indent=2) + "\n")
-
-    if json_output:
-        print(json.dumps(manifest, indent=2))
-    else:
-        print(f"Planned {len(manifest['slices'])} slice work order(s) for {feature}/{stage} -> {_rel(stage_dir)}")
-        print(f"Max parallel: {max_parallel}   Work-order hash: {manifest['work_order_hash']}")
-        for s in manifest["slices"]:
-            print(f"  - {s['slug']:<24} {s['work_order']}"
-                  + (f"   WARN: {s['warnings'][0]}" if s["warnings"] else ""))
-        for s in manifest["skipped"]:
-            print(f"  SKIP {s['slug']:<19} {s['reason']}")
-        print("\nNext: dispatch one agent per work order, then run "
-              f"`sdlc slices check --feature {feature} --stage {stage}`.")
-    return 0
-
-
-def cmd_slices_show(feature: str, stage: str, slice_slug: str,
-                    outdir: str = ".sdlc/parallel", max_parallel: int = 3) -> int:
-    try:
-        manifest, orders = _plan_slices(feature, stage, outdir, max_parallel, [slice_slug], True)
-    except SlicesError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return 1
-    for entry in manifest["slices"]:
-        if entry["slug"] == slice_slug:
-            print(orders[slice_slug], end="")
-            return 0
-    print(f"ERROR: slice '{slice_slug}' was not planned for stage '{stage}'", file=sys.stderr)
-    return 1
-
-
-def _ids_missing(text: str, ids: List[str]) -> List[str]:
-    missing = []
-    for rid in ids:
-        if not re.search(r"(?<![A-Za-z0-9-])" + re.escape(rid) + r"(?![A-Za-z0-9-])", text):
-            missing.append(rid)
-    return missing
-
-
-def _check_design(entry: Dict[str, Any]) -> List[Dict[str, str]]:
-    issues: List[Dict[str, str]] = []
-    path = ROOT / entry["outputs"]["design"]
-    if not path.is_file() or path.stat().st_size == 0:
-        return [{"level": "fail", "message": f"missing or empty design output: {entry['outputs']['design']}"}]
-    text = _read_text(path)
-    if not re.search(r"^#{1,4}[^\n]*requirement coverage", text, re.IGNORECASE | re.MULTILINE):
-        issues.append({"level": "warn", "message": "no 'Requirement coverage' heading found"})
-    missing = _ids_missing(text, entry.get("requirement_ids") or [])
-    if missing:
-        issues.append({"level": "fail", "message": "requirement IDs not covered: " + ", ".join(missing)})
-    return issues
-
-
-def _check_threat_model(entry: Dict[str, Any]) -> List[Dict[str, str]]:
-    path = ROOT / entry["outputs"]["threat_model"]
-    if not path.is_file() or path.stat().st_size == 0:
-        return [{"level": "fail", "message": f"missing or empty threat model: {entry['outputs']['threat_model']}"}]
-    text = _read_text(path)
-    issues: List[Dict[str, str]] = []
-    if not re.findall(r"\bT-\d{2,}\b", text):
-        issues.append({"level": "fail", "message": "no threat IDs (T-001 style) found"})
-    if not re.search(r"^#{1,4}[^\n]*(summary|verdict)", text, re.IGNORECASE | re.MULTILINE):
-        issues.append({"level": "warn", "message": "no summary/verdict heading found"})
-    return issues
-
-
-def _check_backlog(entry: Dict[str, Any], feature: str) -> List[Dict[str, str]]:
-    issues: List[Dict[str, str]] = []
-    path = ROOT / entry["outputs"]["backlog_json"]
-    if not path.is_file() or path.stat().st_size == 0:
-        return [{"level": "fail", "message": f"missing or empty backlog JSON: {entry['outputs']['backlog_json']}"}]
-    try:
-        data = json.loads(_read_text(path))
-    except Exception as exc:  # noqa: BLE001
-        return [{"level": "fail", "message": f"invalid JSON: {exc}"}]
-    if data.get("schema_version") != 1:
-        issues.append({"level": "fail", "message": "schema_version must be 1"})
-    if data.get("feature") not in (None, feature):
-        issues.append({"level": "fail", "message": f"feature is '{data.get('feature')}', expected '{feature}'"})
-    items = data.get("items")
-    if not isinstance(items, list) or not items:
-        return issues + [{"level": "fail", "message": "items[] is missing or empty"}]
-
-    seen = set()
-    duplicates = set()
-    epics = []
-    refs = set()
-    for item in items:
-        iid = str(item.get("id") or "")
-        if not iid:
-            issues.append({"level": "fail", "message": "item without id"})
-            continue
-        if iid in seen:
-            duplicates.add(iid)
-        seen.add(iid)
-        if item.get("type") == "epic":
-            epics.append(item)
-        refs.update(str(x) for x in (item.get("req_refs") or []))
-    if duplicates:
-        issues.append({"level": "fail", "message": "duplicate item IDs: " + ", ".join(sorted(duplicates))})
-    if len(epics) != 1:
-        issues.append({"level": "fail", "message": f"expected exactly one epic, found {len(epics)}"})
-    prefix = entry.get("prefix") or ""
-    if prefix and epics:
-        epic_id = str(epics[0].get("id") or "")
-        if not epic_id.startswith(f"E-{prefix}"):
-            issues.append({"level": "fail", "message": f"epic id '{epic_id}' should start with 'E-{prefix}'"})
-    missing = [rid for rid in (entry.get("requirement_ids") or []) if rid not in refs]
-    if missing:
-        issues.append({"level": "fail", "message": "requirement IDs missing from req_refs: " + ", ".join(missing)})
-    if not (ROOT / entry["outputs"].get("backlog_md", "")).is_file():
-        issues.append({"level": "warn", "message": f"missing human backlog: {entry['outputs'].get('backlog_md')}"})
-    return issues
-
-
-def cmd_slices_check(feature: str, stage: str, outdir: str = ".sdlc/parallel",
-                     json_output: bool = False) -> int:
-    if stage not in SLICE_STAGES:
-        print(f"ERROR: --stage must be one of: {', '.join(SLICE_STAGES)}", file=sys.stderr)
-        return 2
-    stage_dir = ROOT / outdir / feature / stage
-    manifest_path = stage_dir / "manifest.json"
-    if not manifest_path.is_file():
-        print(f"ERROR: missing {_rel(manifest_path)}; run `sdlc slices plan --feature {feature} --stage {stage}` first",
-              file=sys.stderr)
-        return 1
-    try:
-        manifest = json.loads(_read_text(manifest_path))
-    except Exception as exc:  # noqa: BLE001
-        print(f"ERROR: invalid manifest {_rel(manifest_path)}: {exc}", file=sys.stderr)
-        return 1
-
-    results: List[Dict[str, Any]] = []
-    threat_ids: Dict[str, str] = {}
-    for entry in manifest.get("slices") or []:
-        slug = str(entry.get("slug") or "")
-        issues: List[Dict[str, str]] = []
-
-        req_file = ROOT / str(entry.get("requirements_file") or "")
-        if not req_file.is_file():
-            issues.append({"level": "fail", "message": f"requirements slice missing: {entry.get('requirements_file')}"})
-        elif entry.get("slice_hash") and _sha16(req_file) != entry["slice_hash"]:
-            issues.append({"level": "fail", "message": "requirements slice changed since plan; re-plan and re-review"})
-
-        if stage == "design":
-            issues.extend(_check_design(entry))
-        elif stage == "threat-model":
-            issues.extend(_check_threat_model(entry))
-            path = ROOT / entry["outputs"]["threat_model"]
-            if path.is_file():
-                for tid in sorted(set(re.findall(r"\bT-\d{2,}\b", _read_text(path)))):
-                    if tid in threat_ids and threat_ids[tid] != slug:
-                        issues.append({"level": "fail",
-                                       "message": f"threat ID {tid} also used by slice '{threat_ids[tid]}'"})
-                    else:
-                        threat_ids[tid] = slug
-        elif stage == "backlog":
-            issues.extend(_check_backlog(entry, feature))
-
-        level = "fail" if any(i["level"] == "fail" for i in issues) else (
-            "warn" if any(i["level"] == "warn" for i in issues) else "ok")
-        results.append({"slug": slug, "output": next(iter(entry["outputs"].values())),
-                        "status": level, "issues": issues})
-
-    summary = {
-        "expected": len(results),
-        "ok": sum(1 for r in results if r["status"] == "ok"),
-        "warn": sum(1 for r in results if r["status"] == "warn"),
-        "fail": sum(1 for r in results if r["status"] == "fail"),
-    }
-    report = {
-        "schema_version": 1,
-        "feature": feature,
-        "stage": stage,
-        "generated_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "summary": summary,
-        "results": results,
-    }
-    _write_text(stage_dir / "report.json", json.dumps(report, indent=2) + "\n")
-
-    lines = [
-        f"# Slice fan-in report: {feature} / {stage}",
-        "",
-        f"Generated: {report['generated_at']}",
-        f"Result: {'FAIL' if summary['fail'] else ('PASS WITH WARNINGS' if summary['warn'] else 'PASS')}"
-        f" ({summary['ok']} ok, {summary['warn']} warn, {summary['fail']} fail)",
-        "",
-        "| Slice | Status | Output | Issues |",
-        "|---|---|---|---|",
-    ]
-    for r in results:
-        issue_text = "<br>".join(f"[{i['level']}] {i['message']}" for i in r["issues"]) or "-"
-        lines.append(f"| {r['slug']} | {r['status']} | `{r['output']}` | {issue_text} |")
-    if manifest.get("skipped"):
-        lines += ["", "## Skipped at plan time", ""]
-        lines += [f"- `{s['slug']}`: {s['reason']}" for s in manifest["skipped"]]
-    _write_text(stage_dir / "report.md", "\n".join(lines) + "\n")
-
-    if json_output:
-        print(json.dumps(report, indent=2))
-    else:
-        print(f"Slice fan-in: {feature}/{stage} -> {_rel(stage_dir / 'report.md')}")
-        print(f"  expected={summary['expected']} ok={summary['ok']} warn={summary['warn']} fail={summary['fail']}")
-        for r in results:
-            print(f"  {r['status']:<4} {r['slug']:<24} {r['output']}")
-            for i in r["issues"]:
-                print(f"       [{i['level']}] {i['message']}")
-    return 1 if summary["fail"] else 0
-
-
-# ---------------------------------------------------------------------------
-# CLI Argument Dispatcher
-# ---------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(
@@ -1651,34 +1199,6 @@ def main():
     p_scan = subparsers.add_parser("scan", help="Run security scanners and write SARIF + findings JSON")
     p_scan.add_argument("--feature", default=os.environ.get("SDLC_FEATURE", "repo"), help="Feature/report slug (default: repo)")
     p_scan.add_argument("--strict", action="store_true", help="Return error code when findings exist")
-
-    # slices
-    p_slices = subparsers.add_parser("slices", help="Plan and verify parallel slice work (requirements packs)")
-    slices_sub = p_slices.add_subparsers(dest="slices_action", help="Slice action")
-
-    p_s_plan = slices_sub.add_parser("plan", help="Generate one work order per eligible slice")
-    p_s_plan.add_argument("--feature", required=True)
-    p_s_plan.add_argument("--stage", required=True, choices=SLICE_STAGES)
-    p_s_plan.add_argument("--outdir", default=".sdlc/parallel", help="Output directory (default: .sdlc/parallel)")
-    p_s_plan.add_argument("--max-parallel", type=int, default=3, help="Concurrency hint recorded in the manifest")
-    p_s_plan.add_argument("--slice", action="append", dest="slice_list", help="Only this slice (repeatable)")
-    p_s_plan.add_argument("--include-unapproved", action="store_true", help="Also plan slices missing approved prerequisites")
-    p_s_plan.add_argument("--force", action="store_true", help="Overwrite existing work orders")
-    p_s_plan.add_argument("--dry-run", action="store_true", help="Show the plan without writing files")
-    p_s_plan.add_argument("--json", action="store_true", help="Print the manifest as JSON")
-
-    p_s_show = slices_sub.add_parser("show", help="Print one rendered work order")
-    p_s_show.add_argument("--feature", required=True)
-    p_s_show.add_argument("--stage", required=True, choices=SLICE_STAGES)
-    p_s_show.add_argument("--slice", required=True, dest="slice_slug")
-    p_s_show.add_argument("--outdir", default=".sdlc/parallel")
-    p_s_show.add_argument("--max-parallel", type=int, default=3)
-
-    p_s_check = slices_sub.add_parser("check", help="Verify fan-in outputs and requirement coverage")
-    p_s_check.add_argument("--feature", required=True)
-    p_s_check.add_argument("--stage", required=True, choices=SLICE_STAGES)
-    p_s_check.add_argument("--outdir", default=".sdlc/parallel")
-    p_s_check.add_argument("--json", action="store_true", help="Print the report as JSON")
 
     # story
     p_story = subparsers.add_parser("story", help="Manage story implementation lifecycle")
@@ -1744,37 +1264,6 @@ def main():
         sys.exit(verify_gate(gate=args.gate, feature=args.feature, json_output=args.json))
     elif args.subcommand == "scan":
         sys.exit(cmd_scan(feature=args.feature, strict=args.strict))
-    elif args.subcommand == "slices":
-        if args.slices_action == "plan":
-            sys.exit(cmd_slices_plan(
-                feature=args.feature,
-                stage=args.stage,
-                outdir=args.outdir,
-                max_parallel=args.max_parallel,
-                selected=args.slice_list,
-                include_unapproved=args.include_unapproved,
-                force=args.force,
-                dry_run=args.dry_run,
-                json_output=args.json,
-            ))
-        elif args.slices_action == "show":
-            sys.exit(cmd_slices_show(
-                feature=args.feature,
-                stage=args.stage,
-                slice_slug=args.slice_slug,
-                outdir=args.outdir,
-                max_parallel=args.max_parallel,
-            ))
-        elif args.slices_action == "check":
-            sys.exit(cmd_slices_check(
-                feature=args.feature,
-                stage=args.stage,
-                outdir=args.outdir,
-                json_output=args.json,
-            ))
-        else:
-            p_slices.print_help()
-            sys.exit(1)
     elif args.subcommand == "story":
         if args.story_action == "show":
             sys.exit(cmd_story_show(story_id=args.story_id, feature=args.feature, json_output=args.json))
