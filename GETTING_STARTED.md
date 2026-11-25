@@ -20,6 +20,21 @@ Optional security/stack tools: `gitleaks`, `semgrep`, `dotnet`, `npm` (missing t
 
 ## 2. Install & Sync (2 Minutes)
 
+**Option A (recommended) — curl bootstrap.** Run from the root of your repository:
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/rishikesh-net/sdlc-orchestrai/main/install.py | python3 - --tracker local
+
+# Windows (PowerShell)
+Invoke-RestMethod https://raw.githubusercontent.com/rishikesh-net/sdlc-orchestrai/main/install.py | python - --tracker local
+```
+
+This copies the pack and writes `.sdlc/config.yaml` for you — skip steps 1–2 below and continue at step 3.
+Use `--dry-run` to preview, `-t <dir>` to target another folder, and `--force` to overwrite existing files.
+
+**Option B — copy the pack files manually.**
+
 1. **Copy the pack files** into the **root of your repository** (skip `scripts/tests/` and `docs/`):
    `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `skills/`, `scripts/sdlc*`, `scripts/sync-skills.sh`, `.sdlc/config.yaml`, `.sdlc/schema/`, and `.github/workflows/security.yml`.
    *(If `.gitignore` or `.github/` already exist, merge instead of overwriting.)*
