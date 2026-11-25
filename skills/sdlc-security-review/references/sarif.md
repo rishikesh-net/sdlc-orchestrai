@@ -67,6 +67,12 @@ findings are medium/low confidence and should be confirmed manually before filin
 `ci-findings.sarif` with `category: sdlc-scanners`. The job is **non-blocking**: upload gives reviewers
 inline annotations, while CodeQL and `SDLC_STRICT=1` jobs remain the enforcement layer.
 
+Inline annotations in **Security > Code scanning** require GitHub Code Scanning, which is free on public
+repos but needs GitHub Advanced Security (GHAS) on private repos. When it is unavailable the upload steps
+are non-fatal and the SARIF is always saved as a workflow artifact (`sdlc-scans-sarif`,
+`codeql-<language>-sarif`). CodeQL runs only for languages with committed source (C#,
+JavaScript/TypeScript, Python), detected by the workflow's `detect` job.
+
 ## Curated findings vs scanner evidence
 
 - `.sdlc/reports/<feature>-findings.json` — raw scanner evidence (this document). Regenerated on each run.

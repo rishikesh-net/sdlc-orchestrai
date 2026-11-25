@@ -1,6 +1,14 @@
 # Security backstop: the same classes of checks the sdlc-security-review skill uses, enforced in CI.
 # Adjust: .NET version, working directories, and whether to block merges (branch protection).
 # Pin third-party actions to commit SHAs for stricter supply-chain security.
+#
+# Language auto-detection: the CodeQL matrix runs only for languages that actually have committed
+# source (C#, JavaScript/TypeScript, Python). This keeps the workflow green in the framework repo
+# (Python + shell only) while remaining a copy-paste template for downstream .NET/React apps.
+#
+# Code Scanning (inline annotations in Security > Code scanning) requires GitHub Advanced Security
+# on private repos (free on public repos). When it is unavailable, SARIF is still saved as a workflow
+# artifact and the upload steps are non-fatal, so the run stays green.
 name: security
 on:
   pull_request:
@@ -12,6 +20,26 @@ permissions:
   contents: read
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      languages: ${{ steps.d.outputs.languages }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: d
+        name: Detect committed source languages
+        run: |
+          langs=()
+          git ls-files '*.cs' '*.sln' '*.csproj' | grep -vE '\.example\.cs$' | grep -q . && langs+=("csharp")
+          git ls-files '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' | grep -vE '\.example\.(ts|tsx)$' | grep -q . && langs+=("javascript-typescript")
+          git ls-files '*.py' | grep -q . && langs+=("python")
+          json='[]'
+          if [[ ${#langs[@]} -gt 0 ]]; then
+            json="[$(printf '%s\n' "${langs[@]}" | sed 's/.*/"&"/' | paste -sd, -)]"
+          fi
+          echo "Detected CodeQL languages: $json"
+          echo "languages=$json" >> "$GITHUB_OUTPUT"
+
   secrets:
     runs-on: ubuntu-latest
     steps:
@@ -36,8 +64,9 @@ jobs:
       - name: Vulnerable dependencies (NuGet + npm)
         run: SDLC_STRICT=1 bash skills/sdlc-security-review/scripts/scan-deps.sh
 
-  # Publishes SARIF from the same scripts agents run locally. Non-blocking: findings
-  # land in Security > Code scanning for triage; CodeQL below remains the primary SAST gate.
+  # Publishes SARIF from the same scripts agents run locally. Findings land in Security > Code
+  # scanning for triage when available; otherwise the SARIF is kept as a workflow artifact.
+  # CodeQL below remains the primary SAST gate.
   scans:
     runs-on: ubuntu-latest
     permissions:
@@ -50,11 +79,23 @@ jobs:
           python-version: "3.12"
       - name: SARIF converter tests
         run: python -m unittest discover -s scripts/tests -v
+      - name: Install scanners
+        run: pip install semgrep
       - name: Run security scanners
         continue-on-error: true
         run: bash skills/sdlc-security-review/scripts/scan-all.sh --feature ci
-      - name: Upload SARIF
+      - name: Save SARIF report (artifact)
         if: always() && hashFiles('.sdlc/reports/ci-findings.sarif') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdlc-scans-sarif
+          path: |
+            .sdlc/reports/ci-findings.sarif
+            .sdlc/reports/ci-findings.json
+          if-no-files-found: ignore
+      - name: Upload SARIF to Code Scanning
+        if: always() && hashFiles('.sdlc/reports/ci-findings.sarif') != ''
+        continue-on-error: true   # no-op failure when Code Scanning is unavailable (private, no GHAS)
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: .sdlc/reports/ci-findings.sarif
@@ -62,6 +103,8 @@ jobs:
 
 
   codeql:
+    needs: detect
+    if: needs.detect.outputs.languages != '[]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -70,7 +113,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [csharp, javascript-typescript]
+        language: ${{ fromJSON(needs.detect.outputs.languages) }}
     steps:
       - uses: actions/checkout@v4
       - if: matrix.language == 'csharp'
@@ -83,6 +126,24 @@ jobs:
           queries: security-extended
       - uses: github/codeql-action/autobuild@v3
         if: matrix.language == 'csharp'
+      # Analyze without uploading so real build/analysis failures stay fatal even when Code Scanning
+      # is unavailable; the SARIF is written to disk and published below.
       - uses: github/codeql-action/analyze@v3
         with:
+          category: "/language:${{ matrix.language }}"
+          upload: false
+          output: ${{ github.workspace }}/codeql-${{ matrix.language }}.sarif
+      - name: Save CodeQL SARIF (artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-${{ matrix.language }}-sarif
+          path: codeql-${{ matrix.language }}.sarif
+          if-no-files-found: ignore
+      - name: Upload SARIF to Code Scanning
+        if: always()
+        continue-on-error: true   # no-op failure when Code Scanning is unavailable (private, no GHAS)
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: codeql-${{ matrix.language }}.sarif
           category: "/language:${{ matrix.language }}"

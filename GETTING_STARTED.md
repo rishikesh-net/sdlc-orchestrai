@@ -48,7 +48,7 @@ Optional scanners (the scripts skip any that are missing and say so):
    ```bash
    scripts/sdlc.cmd sync-skills   # (or bash scripts/sync-skills.sh)
    ```
-6. In `.github/workflows/security.yml`, replace the `TODO` .NET and Node versions with yours.
+6. In `.github/workflows/security.yml`, the `detect` job auto-detects committed source and CodeQL runs only for languages present (C#, JavaScript/TypeScript, Python). If your repo has .NET or Node code, replace the `TODO` .NET and Node versions with yours. For inline results in **Security > Code scanning** on a private repo, enable GitHub Code Scanning (GitHub Advanced Security); otherwise SARIF is still saved as a workflow artifact.
 
 > **Rule of thumb:** edit only `skills/`, `AGENTS.md`, and `.sdlc/`. The client folders `.claude/skills/`,
 > `.github/skills/`, `.opencode/skills/`, `.agent/skills/`, and `.cursor/rules/` are generated locally by `sdlc sync-skills`.
