@@ -36,7 +36,7 @@ If any gate is missing, run the prerequisite skill first (`sdlc-requirements-ana
    `sdlc story start <story-id> [--feature <feature>]`
    This automatically:
    - Creates and switches to branch `feat/<issue-or-story-id>-<slug>`.
-   - Checkpoints shared state in `.sdlc/state.json` (phase: `build`, active branch recorded).
+   - Checkpoints shared state in `.sdlc/state.json` (phase: `implementation`, active branch recorded).
 
 ### Step 3: Test-First Scaffolding (TDD)
 Before writing any production logic, scaffold automated tests directly derived from the story's acceptance criteria:
@@ -46,8 +46,8 @@ Before writing any production logic, scaffold automated tests directly derived f
      `// AC: Given a signed-in customer, When they save preferences, Then choices persist [REQ-001]`
 2. Include at least **one negative / error test case** (e.g., 401 Unauthorized, 400 ProblemDetails for invalid input, boundary limit).
 3. Refer to:
-   - Backend (.NET C#): `references/test-scaffold.example.cs`
-   - Frontend (React TypeScript): `references/test-scaffold.example.tsx`
+   - Backend (.NET C#): `templates/test-scaffold.example.cs`
+   - Frontend (React TypeScript): `templates/test-scaffold.example.tsx`
 
 ### Step 4: Minimal Working Implementation
 Implement the minimal code required to make tests pass:
@@ -65,7 +65,7 @@ Implement the minimal code required to make tests pass:
 Run automated tests and builds locally:
 - Backend: `dotnet test`
 - Frontend: `npm test` or `pnpm test`
-- Gate check: `sdlc verify implementation`
+- Gate check: `sdlc verify --gate implementation`
 Assert that all tests pass and no regression was introduced.
 
 ### Step 6: PR Preparation & Conventional Commits
@@ -78,7 +78,7 @@ Assert that all tests pass and no regression was introduced.
 4. Open the Pull Request:
    `gh pr create --body-file .sdlc/pr-body.md` (or provide the PR creation link)
 5. Checkpoint the session handoff:
-   `sdlc checkpoint --feature <slug> --phase build --gate implementation=in-review --artifact .sdlc/pr-body.md --next "Run sdlc-security-review Mode B on PR"`
+   `sdlc checkpoint --feature <slug> --phase implementation --gate implementation=in-review --artifact .sdlc/pr-body.md --next "Run sdlc-security-review Mode B on PR"`
 
 ---
 

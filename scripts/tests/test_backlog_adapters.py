@@ -16,7 +16,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PUSH = ROOT / "skills" / "sdlc-backlog-breakdown" / "scripts" / "push-backlog.sh"
 PULL = ROOT / "skills" / "sdlc-backlog-breakdown" / "scripts" / "pull-backlog.sh"
-GRAPH = ROOT / "skills" / "sdlc-session-handoff" / "scripts" / "backlog-to-graph.sh"
 
 BACKLOG = {
     "schema_version": 1,
@@ -227,18 +226,6 @@ class BacklogAdapterTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("created=0 updated=3 failed=0", proc.stdout)
         self.assertIn("issue edit", log.read_text(encoding="utf-8"))
-
-    def test_backlog_to_graph_uses_external_key_for_local(self):
-        self.assertEqual(self.run_script(PUSH, "--file", "docs/backlog/feat-backlog.json").returncode, 0)
-        proc = self.run_script(GRAPH, "--file", "docs/backlog/feat-backlog.json")
-        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        rows = [json.loads(line) for line in proc.stdout.splitlines() if line.strip()]
-        entities = [r for r in rows if r.get("type") == "entity"]
-        self.assertEqual(len(entities), 3)
-        for entity in entities:
-            self.assertNotIn("issue", entity)
-            self.assertEqual(entity["external_key"], entity["id"])
-            self.assertEqual(entity["tracker"], "local")
 
     def test_check_env_reports_local_tracker(self):
         env = os.environ.copy()

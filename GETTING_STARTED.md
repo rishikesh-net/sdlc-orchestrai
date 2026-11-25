@@ -23,7 +23,7 @@ Optional scanners (the scripts skip any that are missing and say so):
 | Node.js and `npm` | npm audit & frontend tests | https://nodejs.org |
 
 ## 2. Install
-1. Copy the contents of the `sdlc-orchestrai-skills` folder into the **root of your repository**.
+1. Copy the pack files (`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `skills/`, `scripts/sdlc*`, `scripts/sync-skills.sh`, `.sdlc/config.yaml`, `.sdlc/schema/`, and `.github/workflows/security.yml`) into the **root of your repository** (skip `scripts/tests/` and `docs/`).
    If `.gitignore` or `.github/` already exist, merge instead of overwriting.
 2. Run the environment diagnostic:
    ```bash
@@ -67,12 +67,12 @@ You should see all 6 core skills: `sdlc-requirements-analyzer`, `sdlc-system-des
 
 Client conventions change between releases, so consult each tool's documentation if a path has moved.
 
-### Initialize shared memory (once)
+### Optional: Initialize shared memory (only if switching clients)
+For solo single-client work, git history and `docs/` artifacts are enough. If you plan to switch between clients mid-feature:
 ```bash
-bash skills/sdlc-session-handoff/scripts/sdlc-state.sh init
+python scripts/sdlc.py init
 ```
-Then ask your agent: **"Build the codebase map using sdlc-session-handoff."** It fills `.sdlc/memory/codebase-map.md` and stamps it with the current
-commit. Commit `.sdlc/`. From now on, every skill checkpoints progress there, so any client can resume.
+Then optionally ask your agent: **"Build the codebase map using sdlc-session-handoff."** It fills `.sdlc/memory/codebase-map.md`. Commit `.sdlc/` when checkpointing between clients.
 
 ## 4. Run your first feature end to end
 Use a small, real feature the first time. Review each artifact before moving on. These gates are the point.
@@ -92,6 +92,7 @@ Prompt:
 > Design this feature from `docs/requirements/<feature>.md`.
 
 Result: `docs/design/<feature>.md`, ADRs in `docs/adr/`, and a threat model in `docs/security/<feature>-threats.md`.
+Run `python scripts/sdlc.py verify --gate design --feature <feature>` to check `REQ-ID` coverage.
 **Review:** Does every requirement map to a design section? Are the data model, API contracts, and rollback plan clear?
 
 ### Step 3: Backlog
@@ -99,6 +100,7 @@ Prompt:
 > Break the approved design into a backlog.
 
 Result: `docs/backlog/<feature>-backlog.md` and `<feature>-backlog.json` (epics, vertical-slice stories, tasks, spikes).
+Run `python scripts/sdlc.py verify --gate backlog --feature <feature>` to verify schema structure and 100% `REQ-ID` coverage.
 **Review:** Are stories small (1 to 3 days)? Does each have Given/When/Then criteria and requirement references?
 Is every requirement covered?
 
@@ -231,12 +233,11 @@ bash $R build    --feature notification-platform
 bash $R validate --feature notification-platform
 ```
 
-**8. Approve per slice, load the graph, commit.**
+**8. Approve per slice and commit.**
 ```bash
-bash skills/sdlc-session-handoff/scripts/sdlc-state.sh checkpoint --client <your-client> --feature notification-platform \
+python scripts/sdlc.py checkpoint --client <your-client> --feature notification-platform \
      --phase requirements --slice notification-preferences --gate requirements=approved \
      --artifact docs/requirements/notification-platform/slices/01-notification-preferences.md --next "Design this slice"
-bash $R to-graph --feature notification-platform --apply
 git add -A && git commit -m "docs: split notification-platform requirements into slices"
 ```
 Keep `_source/` until everyone agrees the pack is complete.
@@ -265,55 +266,35 @@ Typical prompts:
 Each skill writes per-slice artifacts (`docs/design/<feature>/<slice>.md`, `docs/backlog/<feature>/<slice>-backlog.json`, `docs/security/<feature>/<slice>-threats.md`)
 and checkpoints with `--slice`. Create tickets per slice file with `push-backlog.sh` (dry-run first); slice epics can be pushed independently, in dependency order.
 
-### C2. Parallel slice processing (optional)
-Once slices are approved, the lead agent can fan out per-slice design, threat-model, or backlog work:
-
-```bash
-python scripts/sdlc.py slices plan  --feature billing --stage design --max-parallel 3
-# dispatch one agent per work order in .sdlc/parallel/billing/design/, then:
-python scripts/sdlc.py slices check --feature billing --stage design
-```
-
-`plan` skips slices without approved prerequisites and writes scoped work orders plus a manifest. Subagents
-write only their assigned outputs and notes; they must not touch `.sdlc/state.json`, `index.json`, shared docs, or
-tickets. The lead runs `check`, reconciles shared models/ADR proposals, gets human review, and checkpoints each
-slice. Requirements authoring stays sequential. Client-specific dispatch patterns are in
-`skills/sdlc-session-handoff/references/parallel-orchestration.md`.
-
 ### D. Keep the pack healthy
 | Task | Command |
 |---|---|
 | After editing any slice | `bash $R build --feature F` then `validate` |
-| Which approved slices changed since approval? | `bash $R stale --feature F` (also shown by `sdlc-state.sh resume`) |
-| Coverage and risk gaps across the pack | `bash skills/sdlc-session-handoff/scripts/sdlc-graph.sh gaps` |
+| Which approved slices changed since approval? | `bash $R stale --feature F` (also shown by `sdlc resume`) |
 | Retire a requirement | Mark it "Withdrawn" in place; never renumber approved IDs |
 | A slice grew past about 300 lines | Split it by sub-journey (`build` warns) |
 
 Details and edge cases (requirement spanning a boundary, duplicate legacy IDs, very large specs): `skills/sdlc-requirements-analyzer/references/splitting-existing-docs.md` and `slicing-guide.md`.
 
-## 6. Switch clients without losing your place
+## 6. Switch clients without losing your place (optional)
 Example: you start in Claude Code and continue in OpenCode (or Cursor, Copilot, Antigravity).
 
-1. **In the first client**, before you stop (skills do this at each gate; you can also ask: *"Checkpoint our progress"*):
+1. **In the first client**, before you stop (ask: *"Checkpoint our progress"*):
    ```bash
-   bash skills/sdlc-session-handoff/scripts/sdlc-state.sh checkpoint --client claude-code --feature notif \
+   python scripts/sdlc.py checkpoint --client claude-code --feature notif \
         --phase design --gate design=in-review --next "Human review of design, then run threat model"
    git add -A && git commit -m "chore: checkpoint notif design"
    ```
-2. **In the second client**, pull the branch and ask: *"Resume the SDLC work."* It runs `sdlc-state.sh resume`, which shows the handoff note,
-   what changed in the repo since, and whether the codebase map is stale. It then continues from the recorded next action.
+2. **In the second client**, pull the branch and ask: *"Resume the SDLC work."* It runs `python scripts/sdlc.py resume`, which shows the handoff note and what changed in the repo since.
 3. The second client re-reads **only** the changed files, does not redo approved gates, and checks that approved artifacts still exist.
 
 Useful commands:
 | Need | Command |
 |---|---|
-| Where are we? | `sdlc-state.sh resume` |
-| Is the map stale? | `sdlc-state.sh map-status` (then `map-stamp` after refreshing) |
-| Close an open question | `sdlc-state.sh checkpoint --feature F --close-question "exact text"` |
-| Who covers REQ-001? | `sdlc-graph.sh find --rel implements --to REQ-001` |
-| What is uncovered or risky? | `sdlc-graph.sh gaps` |
-| Load a backlog into the graph | `backlog-to-graph.sh --file docs/backlog/F-backlog.json --apply` |
-| Repair after a merge conflict | `sdlc-state.sh render`, `sdlc-graph.sh normalize`, then `validate` |
+| Where are we? | `python scripts/sdlc.py resume` |
+| Verify gate REQ-ID coverage | `python scripts/sdlc.py verify --gate all --feature F` |
+| Close an open question | `python scripts/sdlc.py checkpoint --feature F --close-question "exact text"` |
+| Repair after a merge conflict | `python scripts/sdlc.py render`, then `python scripts/sdlc.py validate` |
 
 Keep in mind: always commit `.sdlc/`, never put secrets in memory files, and treat memory as a hint. If the commit differs, verify before trusting it.
 
@@ -358,15 +339,15 @@ written. The output contract is in `skills/sdlc-security-review/references/sarif
 | Split a big requirements doc | `req-index.sh skeleton`, refine plan, `split --dry-run`, `split` (see section 5) |
 | Load one slice or requirement | `req-index.sh show --feature F --slice S` or `--id REQ-ID` |
 | Find slices edited after approval | `req-index.sh stale --feature F` |
-| Continue after switching client | "Resume the SDLC work" (runs `sdlc-state.sh resume`) |
+| Continue after switching client | "Resume the SDLC work" (runs `python scripts/sdlc.py resume`) |
 | Save progress | "Checkpoint our progress", then commit `.sdlc/` |
-| Update a skill | Edit `skills/...`, run `bash scripts/sync-skills.sh`, commit |
-| Check for drift | `bash scripts/sync-skills.sh --check` |
+| Update a skill | Edit `skills/...`, run `python scripts/sdlc.py sync-skills`, commit `skills/` |
+| Check for drift | `python scripts/sdlc.py sync-skills --check` |
 
 ## 11. Troubleshooting
 | Problem | Fix |
 |---|---|
-| Skills do not appear in the client | Re-run the sync, commit, restart the client, and check its docs for the current skills folder |
+| Skills do not appear in the client | Run `python scripts/sdlc.py sync-skills` locally, restart the client, and check its docs for the current skills folder |
 | `ERROR: set github.repo in .sdlc/config.yaml` | Set `github.repo` to `owner/name` or export `SDLC_REPO` |
 | `gh CLI not installed or not authenticated` | Install `gh` and run `gh auth login` |
 | `jq is required` | Install jq and reopen your shell |
@@ -378,7 +359,7 @@ written. The output contract is in `skills/sdlc-security-review/references/sarif
 | `validate`: depends_on unknown slice / duplicate definition | Fix the slice slug in `depends_on`, or the repeated requirement ID; then `build` |
 | Slice reported STALE | It changed after approval; re-review its design and backlog, then checkpoint again with `--slice` |
 | `resume` warns the recorded commit is not found | Fetch or check out the branch the previous client used; until then treat the state as unverified |
-| Handoff note looks outdated | Run `sdlc-state.sh render`; if state itself is stale, checkpoint again from the current client |
+| Handoff note looks outdated | Run `python scripts/sdlc.py render`; if state itself is stale, checkpoint again from the current client |
 | Duplicate skills in OpenCode | Remove the `.opencode/skills` line from `scripts/sync-skills.sh` and delete that folder |
 | Windows script errors | Run from Git Bash or WSL, not PowerShell or cmd |
 
