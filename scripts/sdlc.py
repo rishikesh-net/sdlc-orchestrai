@@ -820,6 +820,21 @@ def cmd_resume(client: Optional[str] = None) -> int:
     return 0
 
 
+def cmd_install(target: str, tracker: str = "local", dry_run: bool = False, force: bool = False) -> int:
+    """Delegate to the standalone install.py bootstrap installer (single source of truth)."""
+    import importlib.util
+
+    installer_path = ROOT / "install.py"
+    if not installer_path.is_file():
+        print(f"ERROR: installer not found at {installer_path}", file=sys.stderr)
+        return 1
+
+    spec = importlib.util.spec_from_file_location("sdlc_installer", installer_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.run(target=target, tracker=tracker, dry_run=dry_run, force=force, remote=False)
+
+
 def cmd_init() -> int:
     """Initialize .sdlc/ structure if missing."""
     MEMORY_DIR.mkdir(parents=True, exist_ok=True)
@@ -1243,6 +1258,13 @@ def main():
     p_sync = subparsers.add_parser("sync-skills", help="Sync skills to all client directories")
     p_sync.add_argument("--check", action="store_true", help="Check for drift without copying")
 
+    # install
+    p_install = subparsers.add_parser("install", help="Copy SDLCOrchestrAI pack files into a target repository")
+    p_install.add_argument("--target", "-t", default=os.getcwd(), help="Target repository directory (default: current directory)")
+    p_install.add_argument("--tracker", choices=["local", "github"], default="local", help="Tracker mode for .sdlc/config.yaml (default: local)")
+    p_install.add_argument("--dry-run", "-n", action="store_true", help="Preview changes without copying")
+    p_install.add_argument("--force", "-f", action="store_true", help="Overwrite existing files")
+
     # init
     subparsers.add_parser("init", help="Initialize .sdlc/ state and memory directories")
 
@@ -1292,6 +1314,8 @@ def main():
         ))
     elif args.subcommand == "sync-skills":
         sys.exit(cmd_sync_skills(check=args.check))
+    elif args.subcommand == "install":
+        sys.exit(cmd_install(target=args.target, tracker=args.tracker, dry_run=args.dry_run, force=args.force))
     elif args.subcommand == "init":
         sys.exit(cmd_init())
     elif args.subcommand == "render":

@@ -8,6 +8,23 @@ SDLCOrchestrAI gives AI coding agents a repeatable, gate-driven workflow tuned f
 
 ---
 
+## Install (curl bootstrap)
+
+Run this from the root of the repository you want to add SDLCOrchestrAI to:
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/rishikesh-net/sdlc-orchestrai/main/install.py | python3 -
+
+# Windows (PowerShell)
+Invoke-RestMethod https://raw.githubusercontent.com/rishikesh-net/sdlc-orchestrai/main/install.py | python -
+```
+
+Pass flags after `python -` / `python`, e.g. `... | python3 - --dry-run` or `... | python3 - -t ../my-app --tracker github`.
+Prefer copying files by hand? See [GETTING_STARTED.md](GETTING_STARTED.md).
+
+---
+
 ## How it works
 
 Six skills form the delivery chain. Each phase produces a reviewable artifact before the next begins—**every arrow is a human approval gate**.
