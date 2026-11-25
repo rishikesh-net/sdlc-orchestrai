@@ -13,7 +13,7 @@
 # checkpoint options:
 #   --client NAME      claude-code | copilot | cursor | opencode | antigravity (or env SDLC_CLIENT)
 #   --feature SLUG     required
-#   --phase PHASE      requirements design threat-model backlog issues build security-review done
+#   --phase PHASE      requirements design threat-model backlog issues build implementation security-review done
 #   --gate NAME=STATUS repeatable; STATUS: pending | in-review | approved | skipped
 #   --artifact PATH    repeatable
 #   --next "TEXT"      exact next step (written so a different client can execute it)
@@ -30,7 +30,7 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 SDLC="$ROOT/.sdlc"; STATE="$SDLC/state.json"; HANDOFF="$SDLC/HANDOFF.md"
 MEM="$SDLC/memory"; MAP="$MEM/codebase-map.md"; GRAPH="$MEM/graph.jsonl"
 TEMPLATES="$ROOT/skills/sdlc-session-handoff/templates"
-PHASES="requirements design threat-model backlog issues build security-review done"
+PHASES="requirements design threat-model backlog issues build implementation security-review done"
 GATE_STATUS="pending in-review approved skipped"
 REQ_BASE="$ROOT/${SDLC_REQ_DIR:-docs/requirements}"
 

@@ -256,10 +256,12 @@ The `sdlc-security-review` skill interprets the results and adds manual review a
 stack-specific checklists (ASP.NET Core, EF Core/Npgsql, React, PostgreSQL).
 
 ## Continuous integration
-- `.github/workflows/security.yml`: gitleaks, dependency audit, CodeQL (C# and JavaScript/TypeScript), and a non-blocking `scans` job that uploads `ci-findings.sarif` to GitHub Code Scanning on pull requests, pushes to `main`, and weekly.
+- `.github/workflows/security.yml`: gitleaks, dependency audit, and CodeQL on pull requests, pushes to `main`, and weekly. A `detect` job auto-detects committed source, so CodeQL runs only for languages that are present (C#, JavaScript/TypeScript, Python) and skips empty ones. A non-blocking `scans` job runs the same scanners as the skill.
 - `.github/workflows/sync-check.yml`: fails a PR if client skill copies drift from `skills/`.
 
-Set the .NET and Node versions in `security.yml` and consider pinning third-party actions to commit SHAs.
+SARIF reports are always saved as workflow artifacts. Inline annotations in **Security > Code scanning** require GitHub Code Scanning, which is free on public repos but needs GitHub Advanced Security (GHAS) on private repos; without it the upload steps are non-fatal and the run stays green.
+
+Set the .NET and Node versions in `security.yml` if your repo has them, and consider pinning third-party actions to commit SHAs.
 CI is the enforcement layer; the skills help agents understand and fix what CI reports.
 
 ## Customization
