@@ -45,9 +45,9 @@ Before writing any production logic, scaffold automated tests directly derived f
    - Add a comment linking to the criteria and requirement ID:
      `// AC: Given a signed-in customer, When they save preferences, Then choices persist [REQ-001]`
 2. Include at least **one negative / error test case** (e.g., 401 Unauthorized, 400 ProblemDetails for invalid input, boundary limit).
-3. Refer to:
-   - Backend (.NET C#): `templates/test-scaffold.example.cs`
-   - Frontend (React TypeScript): `templates/test-scaffold.example.tsx`
+3. Refer to `references/test-scaffolding.md` for example scaffolds:
+   - Backend (.NET C#) acceptance tests
+   - Frontend (React TypeScript) component tests
 
 ### Step 4: Minimal Working Implementation
 Implement the minimal code required to make tests pass:

@@ -25,7 +25,7 @@ jobs:
     outputs:
       languages: ${{ steps.d.outputs.languages }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
       - id: d
         name: Detect committed source languages
         run: |
@@ -46,10 +46,10 @@ jobs:
       contents: read
       pull-requests: read   # gitleaks-action lists PR commits on pull_request events
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with: { fetch-depth: 0 }
       - name: gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7  # v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}   # required for some org plans
@@ -57,17 +57,20 @@ jobs:
   dependencies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9  # v4.3.1
         with:
           dotnet-version: 8.0.x          # TODO: set to your project's SDK version
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
         with:
           node-version: 20               # TODO: set to your frontend's Node version
       - name: Vulnerable dependencies (NuGet + npm)
-        run: SDLC_STRICT=1 bash skills/sdlc-security-review/scripts/scan-deps.sh
+        run: SDLC_STRICT=1 python scripts/sdlc.py scan --only deps
 
-  # Publishes SARIF from the same scripts agents run locally. Findings land in Security > Code
+  # Publishes SARIF from the same scanners agents run locally. Findings land in Security > Code
   # scanning for triage when available; otherwise the SARIF is kept as a workflow artifact.
   # CodeQL below remains the primary SAST gate.
   scans:
@@ -76,8 +79,8 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
           python-version: "3.12"
       - name: SARIF converter tests
@@ -86,10 +89,10 @@ jobs:
         run: pip install semgrep zizmor
       - name: Run security scanners
         continue-on-error: true
-        run: bash skills/sdlc-security-review/scripts/scan-all.sh --feature ci
+        run: python scripts/sdlc.py scan --feature ci
       - name: Save SARIF report (artifact)
         if: always() && hashFiles('.sdlc/reports/ci-findings.sarif') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: sdlc-scans-sarif
           path: |
@@ -99,7 +102,7 @@ jobs:
       - name: Upload SARIF to Code Scanning
         if: always() && hashFiles('.sdlc/reports/ci-findings.sarif') != ''
         continue-on-error: true   # no-op failure when Code Scanning is unavailable (private, no GHAS)
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@74c1aea9df7c0f02e9b7bfe4a8935abf2e5e3aa6  # v3.39.5
         with:
           sarif_file: .sdlc/reports/ci-findings.sarif
           category: sdlc-scanners
@@ -118,27 +121,27 @@ jobs:
       matrix:
         language: ${{ fromJSON(needs.detect.outputs.languages) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
       - if: matrix.language == 'csharp'
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9  # v4.3.1
         with:
           dotnet-version: 8.0.x          # TODO: set to your project's SDK version
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@74c1aea9df7c0f02e9b7bfe4a8935abf2e5e3aa6  # v3.39.5
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
-      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/autobuild@74c1aea9df7c0f02e9b7bfe4a8935abf2e5e3aa6  # v3.39.5
         if: matrix.language == 'csharp'
       # Analyze without uploading so real build/analysis failures stay fatal even when Code Scanning
       # is unavailable; the SARIF is written to disk and published below.
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@74c1aea9df7c0f02e9b7bfe4a8935abf2e5e3aa6  # v3.39.5
         with:
           category: "/language:${{ matrix.language }}"
           upload: false
           output: ${{ github.workspace }}/codeql-${{ matrix.language }}.sarif
       - name: Save CodeQL SARIF (artifact)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: codeql-${{ matrix.language }}-sarif
           path: codeql-${{ matrix.language }}.sarif
@@ -146,7 +149,7 @@ jobs:
       - name: Upload SARIF to Code Scanning
         if: always()
         continue-on-error: true   # no-op failure when Code Scanning is unavailable (private, no GHAS)
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@74c1aea9df7c0f02e9b7bfe4a8935abf2e5e3aa6  # v3.39.5
         with:
           sarif_file: codeql-${{ matrix.language }}.sarif
           category: "/language:${{ matrix.language }}"
@@ -157,7 +160,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
       - name: Run Trivy IaC & config scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -168,7 +171,7 @@ jobs:
           skip-dirs: node_modules,.git,.sdlc,bin,obj,dist,build
       - name: Save Trivy SARIF (artifact)
         if: always() && hashFiles('trivy-iac.sarif') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: trivy-iac-sarif
           path: trivy-iac.sarif
@@ -176,7 +179,7 @@ jobs:
       - name: Upload Trivy SARIF to Code Scanning
         if: always() && hashFiles('trivy-iac.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@74c1aea9df7c0f02e9b7bfe4a8935abf2e5e3aa6  # v3.39.5
         with:
           sarif_file: trivy-iac.sarif
           category: trivy-iac

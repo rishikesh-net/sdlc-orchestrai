@@ -25,8 +25,8 @@ Input: `docs/design/<feature>.md`. Output: `docs/security/<feature>-threats.md`.
    List the trust boundaries the change touches.
 2. Run the deterministic scans. They write SARIF 2.1.0 and normalized findings to `.sdlc/reports/`
    (never secret values). `--feature <slug>` names the report; default `repo`.
-   - `bash skills/sdlc-security-review/scripts/scan-all.sh --feature <slug>` (all scanners, merged)
-   - or one at a time: `scan-secrets.sh`, `scan-deps.sh`, `scan-sast.sh`, `scan-iac.sh`
+   - `python scripts/sdlc.py scan --feature <slug>` (all scanners, merged)
+   - or one group: `python scripts/sdlc.py scan --only <secrets|sast|deps|iac> --feature <slug>`
    Read `.sdlc/reports/<slug>-findings.json` (`scanners[]` says ran/fallback/skipped) and, if triaging
    inline annotations, `.sdlc/reports/<slug>-findings.sarif`. See `references/sarif.md` for the output
    contract and severity mapping. Treat heuristic-only findings (`confidence: needs-verification`) as
@@ -42,7 +42,7 @@ Input: `docs/design/<feature>.md`. Output: `docs/security/<feature>-threats.md`.
    `severity:<level>`) for findings that will not be fixed in the current PR.
 6. Give the user a short verdict: Block / Fix before merge / Merge with follow-ups / Clean, plus the top 3 issues.
 7. STOP. With approval, fix specific findings. To file findings as GitHub issues, show a dry-run first:
-   `bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh --file docs/security/<name>-findings.json --dry-run`
+   `python scripts/sdlc.py backlog push --file docs/security/<name>-findings.json --dry-run`
 
 ## Severity rubric
 | Severity | Meaning | Examples |
@@ -79,9 +79,9 @@ Scope: <branch/PR/paths>   Date: <date>   Verdict: <Block | Fix before merge | M
 - If the PR adds a dependency, check maintenance, license, and known advisories before approving.
 
 ## Shared memory (cross-client continuity)
-- Start of session: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh resume`. Reuse the codebase map to locate auth, data-access, and input-handling code instead of rescanning.
+- Start of session: `python scripts/sdlc.py resume`. Reuse the codebase map to locate auth, data-access, and input-handling code instead of rescanning.
 - Mode A: record threats as graph entities (`--kind threat --attr severity=high`) and controls as tasks, with `T-001 mitigated_by <task-id>`. Checkpoint `--phase threat-model --gate threat-model=in-review --artifact docs/security/<slug>-threats.md`.
-- Mode B: record findings (`--kind finding --attr severity=high --attr status=open --attr location=path/File.cs:123`; never include secret values). After issues exist, add `SEC-001 tracked_by <task-id>`. Run `bash skills/sdlc-session-handoff/scripts/sdlc-graph.sh gaps` to list unmitigated high threats and untracked high findings before issuing a verdict.
+- Mode B: record findings (`--kind finding --attr severity=high --attr status=open --attr location=path/File.cs:123`; never include secret values). After issues exist, add `python scripts/sdlc.py graph add-relation --from SEC-001 --rel tracked_by --to <task-id>`. Run `python scripts/sdlc.py graph gaps` to list unmitigated high threats and untracked high findings before issuing a verdict.
 - Checkpoint `--phase security-review --gate security-review=in-review|approved --artifact docs/security/<name>-review.md --next "<verdict follow-up>"`.
 
 ## Large requirements (pack mode)

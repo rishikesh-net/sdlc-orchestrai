@@ -14,7 +14,7 @@ Default stack: ASP.NET Core API, EF Core + Npgsql, PostgreSQL, React. Read
 2. Inspect the repo: existing projects, layering, auth setup, DB schema/migrations, API style,
    frontend structure, CI. Reuse what exists.
 3. Ask the user only about blockers (scale, latency, compliance, integration constraints).
-4. Draft `docs/design/<feature>.md` from `templates/design-doc.md.tmpl`:
+4. Draft `docs/design/<feature>.md` from `templates/design-doc.template.md`:
    - Context, goals, non-goals; requirement coverage matrix (every REQ/NFR maps to a design section)
    - Architecture overview: Mermaid C4 context and container diagrams (see `references/design-principles.md`)
    - Components and responsibilities (API modules, background workers, React feature areas)
@@ -24,7 +24,7 @@ Default stack: ASP.NET Core API, EF Core + Npgsql, PostgreSQL, React. Read
    - NFR treatment: performance, scalability, availability, observability, cost
    - Security design summary (filled after the threat model)
    - Alternatives considered with trade-offs; risks; assumptions; open questions
-5. Write an ADR (`templates/adr.md.tmpl`) in `docs/adr/NNNN-title.md` for every significant decision.
+5. Write an ADR (`templates/adr.template.md`) in `docs/adr/NNNN-title.md` for every significant decision.
    Each ADR needs at least one rejected alternative.
 6. Run the `sdlc-security-review` skill in Mode A (threat model). Fold its required controls back into the
    design and flag them for the backlog.
@@ -41,20 +41,20 @@ Default stack: ASP.NET Core API, EF Core + Npgsql, PostgreSQL, React. Read
 - Do not write implementation code. Short DDL/OpenAPI/interface sketches are fine as design artifacts.
 
 ## Shared memory (cross-client continuity)
-- Start of session: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh resume`. Reuse the codebase map for step 2; re-read only the paths it lists as changed.
-- After the design draft: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh checkpoint --client <your-client> --feature <slug> --phase design --gate design=in-review --artifact docs/design/<slug>.md --next "Human review of design; then threat model"` (add each ADR path with `--artifact`).
+- Start of session: `python scripts/sdlc.py resume`. Reuse the codebase map for step 2; re-read only the paths it lists as changed.
+- After the design draft: `python scripts/sdlc.py checkpoint --client <your-client> --feature <slug> --phase design --gate design=in-review --artifact docs/design/<slug>.md --next "Human review of design; then threat model"` (add each ADR path with `--artifact`).
 - Record structure in the graph: design sections (`--kind design_section`, e.g. id `DS-<slug>-api`), ADRs (`--kind adr`), and relations `DS-... covers REQ-...` and `ADR-... relates_to DS-...`.
 - After the threat model (via `sdlc-security-review` Mode A) checkpoint `--gate threat-model=in-review`; after approvals set `design=approved`, `threat-model=approved`, `--phase backlog`, `--next "Run sdlc-backlog-breakdown"`.
 
 ## Large requirements (pack mode)
 If the requirements are a pack (`docs/requirements/<feature>/` with `00-index.md`, `slices/`, `nfr.md`) instead of a single file:
 1. Read `00-index.md` and `nfr.md` first. Do **not** load every slice.
-2. Design **one slice at a time**. Load it with `bash skills/sdlc-requirements-analyzer/scripts/req-index.sh show --feature <feature> --slice <slice>` (or one requirement with `--id <REQ-ID>`).
+2. Design **one slice at a time**. Load it with `python scripts/sdlc.py req show --feature <feature> --slice <slice>` (or one requirement with `--id <REQ-ID>`).
    Respect `depends_on`: design prerequisite slices first.
 3. Write a design overview `docs/design/<feature>/00-overview.md` (architecture, shared components, data ownership, cross-cutting NFR treatment)
    and one section file per slice `docs/design/<feature>/<slice>.md`. Every requirement ID in the slice maps to a design section (coverage matrix per slice).
-4. Gate per slice: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh checkpoint --client <your-client> --feature <feature> --phase design --slice <slice> --gate design=in-review --artifact docs/design/<feature>/<slice>.md`.
-   Run `bash skills/sdlc-requirements-analyzer/scripts/req-index.sh stale --feature <feature>`: if a slice changed after approval, re-review its design before continuing.
+4. Gate per slice: `python scripts/sdlc.py checkpoint --client <your-client> --feature <feature> --phase design --slice <slice> --gate design=in-review --artifact docs/design/<feature>/<slice>.md`.
+   Run `python scripts/sdlc.py req stale --feature <feature>`: if a slice changed after approval, re-review its design before continuing.
 5. Record slice-to-design links in the graph (`DS-<slice> covers REQ-...`).
 6. Optional parallel design: after `00-overview.md` exists and slices are approved, the lead can run
    `python scripts/sdlc.py slices plan --feature <feature> --stage design`, dispatch one agent per work order,

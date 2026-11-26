@@ -18,7 +18,7 @@ Requirement
   -> sdlc-system-design          -> docs/design/<feature>.md + ADRs           [review]
      + sdlc-security-review (Mode A: threat model)                             [review]
   -> sdlc-backlog-breakdown      -> docs/backlog/<feature>-backlog.md + .json [review]
-  -> push-backlog.sh --dry-run, then apply                                     [review]
+  -> python scripts/sdlc.py backlog push --dry-run, then apply                 [review]
   -> sdlc-feature-implementer    -> branch + TDD tests + code + draft PR       [review]
   -> sdlc-security-review (Mode B: diff/PR review) + CI scans                 [review]
   -> merge
@@ -29,7 +29,7 @@ Run `python scripts/sdlc.py verify --gate <gate> --feature <feature>` before ask
 
 ## Large requirements (packs)
 - Use a single file up to ~40 requirements or 400 lines; above that, use a vertical-slice pack (`docs/requirements/<feature>/`, slice-prefixed IDs `REQ-PREF-001`) via `sdlc-requirements-analyzer`.
-- Never load a whole pack into context: read `00-index.md`, then one slice (`req-index.sh show --feature F --slice S`).
+- Never load a whole pack into context: read `00-index.md`, then one slice (`python scripts/sdlc.py req show --feature F --slice S`).
 - Design, backlog, and security work proceed one slice at a time.
 
 ## Shared memory (opt-in for client switches)

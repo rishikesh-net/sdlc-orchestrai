@@ -12,7 +12,6 @@ Go from a fresh repository to your first feature flowing through requirements, s
 | **Git** | Branches and version control | `git --version` |
 | **An AI client** | Claude Code, Copilot, Cursor, OpenCode, or Antigravity | — |
 | **GitHub CLI (`gh`)** | *Optional* — only needed when pushing to GitHub Issues/PRs | `gh --version` |
-| **Git Bash / WSL** | *Windows only* — needed for `push-backlog.sh`, `req-index.sh`, `scan-*.sh` | `bash --version` |
 
 Optional security/stack tools: `gitleaks`, `semgrep`, `trivy`, `osv-scanner`, `zizmor`, `dotnet`, `npm` (missing tools are reported clearly by `check-env` and never block setup; each scanner can be toggled in `.sdlc/config.yaml`).
 
@@ -36,7 +35,7 @@ Use `--dry-run` to preview only (it **copies nothing**), `-t <dir>` to target an
 **Option B — copy the pack files manually.**
 
 1. **Copy the pack files** into the **root of your repository** (skip `scripts/tests/` and `docs/`):
-   `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `skills/`, `scripts/sdlc*`, `scripts/sync-skills.sh`, `.sdlc/config.yaml`, `.sdlc/schema/`, and `.github/workflows/security.yml`.
+   `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `skills/`, `scripts/sdlc*`, `.sdlc/config.yaml`, `.sdlc/schema/`, and `.github/workflows/security.yml`.
    *(If `.gitignore` or `.github/` already exist, merge instead of overwriting.)*
 
 2. **Choose your tracker in `.sdlc/config.yaml`:**
@@ -114,11 +113,11 @@ Try a small, real feature first. **Review each artifact before moving to the nex
 ### Step 4: Dry Run, Then Create Tickets
 - **Preview first (writes nothing):**
   ```bash
-  bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh --file docs/backlog/<feature>-backlog.json --dry-run
+  python scripts/sdlc.py backlog push --file docs/backlog/<feature>-backlog.json --dry-run
   ```
 - **Apply when satisfied** (re-running is idempotent and updates instead of duplicating):
   ```bash
-  bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh --file docs/backlog/<feature>-backlog.json
+  python scripts/sdlc.py backlog push --file docs/backlog/<feature>-backlog.json
   ```
 
 ### Step 5: Implement Story to PR
@@ -151,7 +150,7 @@ Try a small, real feature first. **Review each artifact before moving to the nex
 | Check environment & config | `python scripts/sdlc.py check-env` |
 | Sync edited skills to clients | `python scripts/sdlc.py sync-skills` |
 | Verify gate & `REQ-ID` coverage | `python scripts/sdlc.py verify --gate <gate> --feature <slug>` |
-| Preview ticket creation | `bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh --file ... --dry-run` |
+| Preview ticket creation | `python scripts/sdlc.py backlog push --file ... --dry-run` |
 | Start implementing a story | `python scripts/sdlc.py story start E1-S1` |
 | Generate PR description | `python scripts/sdlc.py story pr-body E1-S1 --output .sdlc/pr-body.md` |
 | Run local security scans | `python scripts/sdlc.py scan --feature <slug>` |
@@ -160,7 +159,7 @@ Try a small, real feature first. **Review each artifact before moving to the nex
 
 ## 5. Advanced Workflows (When You Need Them)
 
-- **Large requirements (>40 REQs or >400 lines):** Use a vertical-slice pack (`docs/requirements/<feature>/`) with `skills/sdlc-requirements-analyzer/scripts/req-index.sh` (`analyze`, `skeleton`, `split --dry-run`, `split`, `show --slice`). See [splitting-existing-docs.md](skills/sdlc-requirements-analyzer/references/splitting-existing-docs.md).
+   - **Large requirements (>40 REQs or >400 lines):** Use a vertical-slice pack (`docs/requirements/<feature>/`) with `python scripts/sdlc.py req` (`analyze`, `skeleton`, `split --dry-run`, `split`, `show --slice`). See [splitting-existing-docs.md](skills/sdlc-requirements-analyzer/references/splitting-existing-docs.md).
 - **Switching AI clients mid-feature (opt-in):** Run `python scripts/sdlc.py checkpoint --client <name> --feature <slug> --phase <phase> --next "..."` and commit `.sdlc/`, then run `python scripts/sdlc.py resume` in the new client. See [state-protocol.md](skills/sdlc-session-handoff/references/state-protocol.md).
 - **CI enforcement & security config:** Commit `.github/workflows/security.yml` and `.github/workflows/sync-check.yml`, set your .NET/Node versions in `security.yml` if applicable, and toggle scanners (`auto` | `enabled` | `disabled`) in `.sdlc/config.yaml` under `security:`. See [docs/design/security-tooling-expansion.md](docs/design/security-tooling-expansion.md) for the full roadmap (including Roslyn, ESLint SDL, Squawk, pytm, and ZAP).
 - **Customize for your team:** Edit `skills/sdlc-system-design/references/design-principles.md`, `skills/sdlc-security-review/references/`, and `AGENTS.md`, then re-run `python scripts/sdlc.py sync-skills`.
@@ -175,6 +174,4 @@ Try a small, real feature first. **Review each artifact before moving to the nex
 | Antigravity wrapper reads `.agents/` | Run `SDLC_SYNC_EXTRA=".agents/skills" python scripts/sdlc.py sync-skills` |
 | `python` fails on Windows Store alias | Run via `scripts/sdlc.cmd <cmd>` (auto-detects installed Python) |
 | `gh CLI not installed or not authenticated` | Use `tracker: local` for offline tickets, or install `gh` and run `gh auth login` |
-| `jq is required` (Bash scripts) | Install `jq` (`winget install jqlang.jq`, `brew install jq`, `apt install jq`) |
-| Windows `.sh` script errors | Run `.sh` scripts from Git Bash or WSL, not PowerShell/CMD |
-| Duplicate skills in OpenCode | Remove `.opencode/skills` from `scripts/sync-skills.sh` and `scripts/sdlc.py` (OpenCode also reads `.claude/skills/`) |
+| Duplicate skills in OpenCode | Remove `.opencode/skills` from `scripts/sdlc.py` `sync-skills` targets (OpenCode also reads `.claude/skills/`) |
