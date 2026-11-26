@@ -6,6 +6,7 @@ Run: python -m unittest discover -s scripts/tests -v
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -84,11 +85,22 @@ exit 0
 
 
 def _bash_available() -> bool:
-    return shutil.which("bash") is not None and shutil.which("jq") is not None
+    """The adapters use bash associative arrays (bash 4+), so 3.2 (macOS) skips."""
+    bash = shutil.which("bash")
+    if bash is None or shutil.which("jq") is None:
+        return False
+    try:
+        version = subprocess.run(
+            [bash, "--version"], capture_output=True, text=True, timeout=10
+        ).stdout
+    except OSError:
+        return False
+    match = re.search(r"version (\d+)\.", version)
+    return bool(match) and int(match.group(1)) >= 4
 
 
 @unittest.skipIf(os.name == "nt", "adapter integration tests require POSIX bash paths")
-@unittest.skipIf(not _bash_available(), "bash and jq are required")
+@unittest.skipIf(not _bash_available(), "bash 4+ and jq are required")
 class BacklogAdapterTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="sdlc-backlog-"))
@@ -129,6 +141,30 @@ class BacklogAdapterTests(unittest.TestCase):
         self.assertIn("E1-S1", proc.stdout)
         self.assertFalse((self.tmp / "docs" / "backlog" / "tickets").exists())
         self.assertEqual(self.backlog_path.read_text(encoding="utf-8"), before)
+
+    def test_dry_run_plan_contract(self):
+        proc = self.run_script(PUSH, "--file", "docs/backlog/feat-backlog.json", "--dry-run")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        out = proc.stdout
+        # Header + one row per item, with the stable plan columns.
+        for heading in ("ID", "TYPE", "ACTION", "ISSUE", "TITLE"):
+            self.assertIn(heading, out)
+        self.assertIn("E1", out)
+        self.assertIn("E1-S1", out)
+        self.assertIn("E1-T1", out)
+        self.assertIn("create", out)
+        self.assertIn("Dry run complete. No changes were made.", out)
+        self.assertFalse((self.tmp / "docs" / "backlog" / "tickets").exists())
+        self.assertEqual(self.read_backlog(), BACKLOG)
+
+    def test_duplicate_ids_rejected_before_touching_tracker(self):
+        duplicate = json.loads(json.dumps(BACKLOG))
+        duplicate["items"].append(dict(duplicate["items"][0]))
+        self.backlog_path.write_text(json.dumps(duplicate, indent=2), encoding="utf-8")
+        proc = self.run_script(PUSH, "--file", "docs/backlog/feat-backlog.json", "--dry-run")
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn("duplicate ids", proc.stderr)
+        self.assertFalse((self.tmp / "docs" / "backlog" / "tickets").exists())
 
     def test_local_apply_creates_tickets_and_external(self):
         proc = self.run_script(PUSH, "--file", "docs/backlog/feat-backlog.json")
