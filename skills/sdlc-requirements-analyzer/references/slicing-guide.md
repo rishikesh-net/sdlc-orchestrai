@@ -39,5 +39,5 @@ Declare `depends_on: other-slice` in front matter only for real prerequisites (s
 Order slices so dependencies come first. Keep the graph shallow; a long chain means the slicing is off.
 
 ## Review and approval
-Review and approve per slice. A slice edited after approval is flagged stale by `req-index.sh stale` and by `sdlc-state.sh resume`.
+Review and approve per slice. A slice edited after approval is flagged stale by `req-index.sh stale` and by `python scripts/sdlc.py resume`.
 Use the status values draft, in-review, approved in front matter, and checkpoint with `--slice <slug>`.

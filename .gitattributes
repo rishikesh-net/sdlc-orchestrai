@@ -1,2 +1,7 @@
 # Union-merge the append-friendly graph; run `sdlc-graph.sh normalize` and `validate` after merging.
 .sdlc/memory/graph.jsonl merge=union
+
+# Vendored launchers: keep them for Windows UX without skewing the language profile.
+scripts/sdlc        linguist-vendored
+scripts/sdlc.cmd    linguist-vendored
+scripts/sdlc.ps1    linguist-vendored

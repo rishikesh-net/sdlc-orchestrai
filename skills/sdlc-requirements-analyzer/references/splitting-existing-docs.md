@@ -36,7 +36,7 @@ survived, and put the result in `docs/requirements/_incoming/`. Do not split a f
    - slices that cannot be understood alone: add the missing context from the glossary or overview
 8. **Finish**: fill `summary`, `priority`, `depends_on`, `owner` in each slice's front matter; then
    `req-index.sh build --feature <slug>` and `req-index.sh validate --feature <slug>`.
-9. **Approve per slice** with `sdlc-state.sh checkpoint --slice <slice> --gate requirements=approved ...`, load the graph with
+9. **Approve per slice** with `python scripts/sdlc.py checkpoint --slice <slice> --gate requirements=approved ...`, load the graph with
    `req-index.sh to-graph --feature <slug> --apply`, and commit the pack. Keep `_source/` until everyone agrees the pack is complete.
 
 ## Plan format

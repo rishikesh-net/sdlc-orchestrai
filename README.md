@@ -55,7 +55,7 @@ Traceability runs end to end: `REQ-012` -> design section -> `E1-S3` -> ticket `
 
 ## 2-Minute Quick Start
 
-1. **Copy the pack into your repository** (`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `skills/`, `scripts/sdlc*`, `scripts/sync-skills.sh`, `.sdlc/config.yaml`, `.sdlc/schema/`, and `.github/workflows/security.yml`).
+1. **Copy the pack into your repository** (`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `skills/`, `scripts/sdlc*`, `.sdlc/config.yaml`, `.sdlc/schema/`, and `.github/workflows/security.yml`).
 2. **Check your environment and sync skills to your client:**
    ```bash
    python scripts/sdlc.py check-env

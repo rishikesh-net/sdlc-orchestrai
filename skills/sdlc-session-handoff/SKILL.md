@@ -16,7 +16,7 @@ Client-native memory is siloed. This skill keeps optional project memory **in th
 | `.sdlc/HANDOFF.md` | Human-readable "where we left off" (generated from `state.json`; never edit by hand) | `python scripts/sdlc.py render` |
 | `.sdlc/memory/codebase-map.md` | Compact map of the repo so new sessions avoid full rescans | the agent |
 
-CLI: `scripts/sdlc` / `scripts/sdlc.cmd` (or `python scripts/sdlc.py`, with `sdlc-state.sh` as a compatibility shim).
+CLI: `scripts/sdlc` / `scripts/sdlc.cmd` (or `python scripts/sdlc.py`).
 
 ## 1. Resume (when switching clients or resuming a paused feature)
 1. Run `python scripts/sdlc.py resume`. It prints the handoff note, compares the recorded commit with `HEAD`, and lists files changed since.
@@ -37,7 +37,7 @@ python scripts/sdlc.py checkpoint \
 - Commit `.sdlc/` so the next client can read it.
 
 ## 3. Codebase map (optional)
-Follow `references/codebase-map-guide.md` to write `.sdlc/memory/codebase-map.md` from `templates/codebase-map.md.tmpl` (aim for under 300 lines: structure, modules, API surface, DB schema summary, auth, build/test commands).
+Follow `references/codebase-map-guide.md` to write `.sdlc/memory/codebase-map.md` from `templates/codebase-map.template.md` (aim for under 300 lines: structure, modules, API surface, DB schema summary, auth, build/test commands).
 
 ## Rules
 - **Verify before trusting.** If `repo_sha` differs from `HEAD`, check changed files before acting on old state.

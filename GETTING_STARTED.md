@@ -36,7 +36,7 @@ Use `--dry-run` to preview only (it **copies nothing**), `-t <dir>` to target an
 **Option B — copy the pack files manually.**
 
 1. **Copy the pack files** into the **root of your repository** (skip `scripts/tests/` and `docs/`):
-   `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `skills/`, `scripts/sdlc*`, `scripts/sync-skills.sh`, `.sdlc/config.yaml`, `.sdlc/schema/`, and `.github/workflows/security.yml`.
+   `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `skills/`, `scripts/sdlc*`, `.sdlc/config.yaml`, `.sdlc/schema/`, and `.github/workflows/security.yml`.
    *(If `.gitignore` or `.github/` already exist, merge instead of overwriting.)*
 
 2. **Choose your tracker in `.sdlc/config.yaml`:**
@@ -177,4 +177,4 @@ Try a small, real feature first. **Review each artifact before moving to the nex
 | `gh CLI not installed or not authenticated` | Use `tracker: local` for offline tickets, or install `gh` and run `gh auth login` |
 | `jq is required` (Bash scripts) | Install `jq` (`winget install jqlang.jq`, `brew install jq`, `apt install jq`) |
 | Windows `.sh` script errors | Run `.sh` scripts from Git Bash or WSL, not PowerShell/CMD |
-| Duplicate skills in OpenCode | Remove `.opencode/skills` from `scripts/sync-skills.sh` and `scripts/sdlc.py` (OpenCode also reads `.claude/skills/`) |
+| Duplicate skills in OpenCode | Remove `.opencode/skills` from `scripts/sdlc.py` `sync-skills` targets (OpenCode also reads `.claude/skills/`) |

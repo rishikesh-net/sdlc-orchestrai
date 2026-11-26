@@ -14,7 +14,7 @@ Three modes. Pick one in step 1.
 | C. Split an existing document | A large requirements document already exists (Word export, wiki page, long markdown) | a pack created from it, verbatim, with a coverage check |
 
 Scripts: `bash skills/sdlc-requirements-analyzer/scripts/req-index.sh <command>` (needs bash, jq, awk, git).
-Before starting, resume shared memory: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh resume`.
+Before starting, resume shared memory: `python scripts/sdlc.py resume`.
 
 ## 1. Choose the mode
 - The user supplied a big existing document, or says it is too large/bulky: **Mode C** (see below).
@@ -25,7 +25,7 @@ Before starting, resume shared memory: `bash skills/sdlc-session-handoff/scripts
 ## Mode A: single file
 1. Gather input (chat, `gh issue view <n> --comments`, pasted doc). Inspect the repo briefly so requirements fit what exists.
 2. Ask at most 5 blocking questions (users, scale, compliance/data sensitivity, deadlines, integrations). Do not ask what you can infer.
-3. Draft `docs/requirements/<feature>.md` from `templates/requirements.md.tmpl` with global IDs (`REQ-001`, `NFR-001`).
+3. Draft `docs/requirements/<feature>.md` from `templates/requirements.template.md` with global IDs (`REQ-001`, `NFR-001`).
 4. Self-check against the quality rules. STOP for review. Checkpoint (see "Shared memory").
 
 ## Mode B: new pack
@@ -71,8 +71,8 @@ Never rewrite requirement wording during a split. The script copies lines verbat
 - [ ] Pack mode: `build` and `validate` clean, slice table in `00-index.md` accurate, every slice has summary and priority
 
 ## Shared memory (cross-client continuity)
-- Mode A: when the draft is ready, `sdlc-state.sh checkpoint --client <your-client> --feature <slug> --phase requirements --gate requirements=in-review --artifact docs/requirements/<slug>.md --next "Human review of requirements"`; after approval set `approved` and `--phase design`.
-- Mode B/C: approve **per slice**. For each slice: `sdlc-state.sh checkpoint --client <your-client> --feature <slug> --phase requirements --slice <slice-slug> --gate requirements=approved --artifact docs/requirements/<slug>/slices/<NN-slice>.md --next "..."`.
+- Mode A: when the draft is ready, `python scripts/sdlc.py checkpoint --client <your-client> --feature <slug> --phase requirements --gate requirements=in-review --artifact docs/requirements/<slug>.md --next "Human review of requirements"`; after approval set `approved` and `--phase design`.
+- Mode B/C: approve **per slice**. For each slice: `python scripts/sdlc.py checkpoint --client <your-client> --feature <slug> --phase requirements --slice <slice-slug> --gate requirements=approved --artifact docs/requirements/<slug>/slices/<NN-slice>.md --next "..."`.
   This records the slice's content hash; later `resume` and `req-index.sh stale --feature <slug>` flag any slice edited after approval so its design and backlog get re-reviewed.
 - Record requirements in the graph: Mode A: `sdlc-graph.sh add-entity --id REQ-001 --kind requirement --source <file>`. Mode B/C: `req-index.sh to-graph --feature <slug> --apply` (creates slice and requirement entities and `part_of` links).
 - When all slices are approved: checkpoint `--phase design --next "Run sdlc-system-design, one slice at a time"`.

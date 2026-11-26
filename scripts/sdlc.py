@@ -742,7 +742,7 @@ def cmd_story_pr_body(story_id: str, feature: Optional[str] = None, output_file:
     else:
         rows = f"| N/A | `{dref}` | Unit tests |"
 
-    tmpl_path = ROOT / "skills" / "sdlc-feature-implementer" / "templates" / "pr-description.md.tmpl"
+    tmpl_path = ROOT / "skills" / "sdlc-feature-implementer" / "templates" / "pr-description.template.md"
     if tmpl_path.is_file():
         body = tmpl_path.read_text(encoding="utf-8")
         body = body.replace("${CLOSES_ISSUE}", closes_str)
@@ -892,7 +892,7 @@ def cmd_init() -> int:
         graph_file.touch()
 
     if not CODEBASE_MAP.is_file():
-        tmpl = ROOT / "skills" / "sdlc-session-handoff" / "templates" / "codebase-map.md.tmpl"
+        tmpl = ROOT / "skills" / "sdlc-session-handoff" / "templates" / "codebase-map.template.md"
         if tmpl.is_file():
             CODEBASE_MAP.write_text(tmpl.read_text(encoding="utf-8"), encoding="utf-8")
         else:

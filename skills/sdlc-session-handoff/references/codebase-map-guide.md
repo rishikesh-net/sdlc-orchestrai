@@ -6,8 +6,8 @@ Goal: let any client understand the repo in minutes without a full scan, and ref
 1. List tracked files by area: `git ls-files | head -300`, then group by top-level folder.
 2. Read manifests and entry points only: solution/project files, `Program.cs`/startup, `package.json`, `vite.config.*`,
    migrations folder, CI workflows, README. Skim, do not read every file.
-3. Fill `templates/codebase-map.md.tmpl`. Keep each section to a few lines with file paths as pointers.
-4. Run `sdlc-state.sh map-stamp` to record the commit.
+3. Fill `templates/codebase-map.template.md`. Keep each section to a few lines with file paths as pointers.
+4. Run `python scripts/sdlc.py map-stamp` to record the commit.
 
 ## Sections to capture
 - Solution/projects and layering (API, Application, Domain, Infrastructure, tests)
@@ -21,9 +21,9 @@ Goal: let any client understand the repo in minutes without a full scan, and ref
 - Known hazards ("do not touch" areas, flaky tests, generated code)
 
 ## How to refresh
-1. `sdlc-state.sh map-status` lists changed paths since the stamp.
+1. `python scripts/sdlc.py map-status` lists changed paths since the stamp.
 2. Re-read only those paths (and their neighbors if structure changed). Update only affected sections.
-3. `sdlc-state.sh map-stamp`.
+3. `python scripts/sdlc.py map-stamp`.
 4. If more than about a third of the repo changed, rebuild instead of patching.
 
 ## Style

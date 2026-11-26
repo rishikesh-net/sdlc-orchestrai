@@ -53,7 +53,6 @@ class TestPackItems(unittest.TestCase):
             "scripts/sdlc.cmd",
             "scripts/sdlc.ps1",
             "scripts/sdlc",
-            "scripts/sync-skills.sh",
             "install.py",
         ]:
             self.assertIn(expected, rels)

@@ -272,7 +272,7 @@ cmd_split() {
   # cross-cutting
   local has_nfr has_gl nfr_prefix; nfr_prefix="$(jq -r '.cross_cutting.nfr.prefix // "GEN"' "$plan")"
   { printf -- '---\nslice: nfr\ntitle: Cross-cutting requirements\nprefix: %s\nstatus: draft\nsummary: Non-functional and cross-cutting requirements shared by all slices\n---\n\n# Cross-cutting requirements\n\n' "$nfr_prefix"
-    if grep -q '^nfr	' "$tmpd/assign.tsv"; then extract nfr; else fill_tpl "$TPL/requirements-nfr.md.tmpl" | awk 'f{print} /^# /{f=1}'; fi; } > "$pack/nfr.md"
+    if grep -q '^nfr	' "$tmpd/assign.tsv"; then extract nfr; else fill_tpl "$TPL/requirements-nfr.template.md" | awk 'f{print} /^# /{f=1}'; fi; } > "$pack/nfr.md"
   { printf -- '---\nslice: glossary\ntitle: Glossary\nstatus: draft\n---\n\n# Glossary\n\n'
     if grep -q '^glossary	' "$tmpd/assign.tsv"; then extract glossary; else printf '| Term | Meaning |\n|---|---|\n|  |  |\n'; fi; } > "$pack/glossary.md"
   if [[ "$unassigned" -gt 0 ]]; then
@@ -283,7 +283,7 @@ cmd_split() {
   # index
   local overview_file="$tmpd/overview.md"
   if grep -q '^overview	' "$tmpd/assign.tsv"; then extract overview > "$overview_file"; else printf 'TODO: problem statement, goals, non-goals, actors.\n' > "$overview_file"; fi
-  fill_tpl "$TPL/requirements-index.md.tmpl" "FEATURE=$feature" "TITLE=$title" "SOURCE=_source/$base" \
+  fill_tpl "$TPL/requirements-index.template.md" "FEATURE=$feature" "TITLE=$title" "SOURCE=_source/$base" \
     | awk -v f="$overview_file" '$0=="{{OVERVIEW}}"{while((getline l<f)>0)print l; next}{print}' > "$pack/00-index.md"
 
   # ID policy
@@ -388,10 +388,10 @@ cmd_init_pack() {
   [[ ! -d "$pack" ]] || die "$(relpath "$pack") already exists"
   mkdir -p "$pack/slices"
   echo '- (new pack)' > /dev/null
-  fill_tpl "$TPL/requirements-index.md.tmpl" "FEATURE=$feature" "TITLE=${title:-$feature}" "SOURCE=n/a (new pack)" \
+  fill_tpl "$TPL/requirements-index.template.md" "FEATURE=$feature" "TITLE=${title:-$feature}" "SOURCE=n/a (new pack)" \
     | awk '$0=="{{OVERVIEW}}"{print "TODO: problem statement, goals, non-goals, actors."; next}{print}' > "$pack/00-index.md"
-  fill_tpl "$TPL/requirements-nfr.md.tmpl" > "$pack/nfr.md"
-  fill_tpl "$TPL/requirements-glossary.md.tmpl" > "$pack/glossary.md"
+  fill_tpl "$TPL/requirements-nfr.template.md" > "$pack/nfr.md"
+  fill_tpl "$TPL/requirements-glossary.template.md" > "$pack/glossary.md"
   jq -n --arg f "$feature" --arg re "$DEFAULT_PACK_RE" '{schema_version:1, feature:$f, id_policy:"pack", id_regex:$re, created_by:"req-index.sh init-pack"}' > "$pack/pack.json"
   cmd_build --feature "$feature" >/dev/null
   echo "Pack scaffolded at $(relpath "$pack")/. Add capability slices with: req-index.sh new-slice --feature $feature --slug <slug> --title <title> --prefix <PFX>"
@@ -408,7 +408,7 @@ cmd_new_slice() {
   slice_file "$pack" "$slug" >/dev/null && die "slice $slug already exists"
   local clash; clash="$(grep -lE "^prefix: $prefix\$" "$pack"/slices/*.md 2>/dev/null || true)"; [[ -z "$clash" ]] || die "prefix $prefix already used by $(basename "$clash")"
   local n; n="$(ls "$pack"/slices/*.md 2>/dev/null | wc -l | tr -d ' ')"; local nn; nn="$(printf '%02d' $((n+1)))"
-  fill_tpl "$TPL/requirements-slice.md.tmpl" "SLUG=$slug" "TITLE=$title" "PREFIX=$prefix" "PRIORITY=$prio" "DEPENDS=$deps" "SUMMARY=$summary" > "$pack/slices/$nn-$slug.md"
+  fill_tpl "$TPL/requirements-slice.template.md" "SLUG=$slug" "TITLE=$title" "PREFIX=$prefix" "PRIORITY=$prio" "DEPENDS=$deps" "SUMMARY=$summary" > "$pack/slices/$nn-$slug.md"
   cmd_build --feature "$feature" >/dev/null
   echo "Created $(relpath "$pack")/slices/$nn-$slug.md (IDs will look like REQ-$prefix-001)"
 }
@@ -467,7 +467,7 @@ cmd_build() {
   jq -r '
     "| # | Slice | Status | Priority | Requirements | Lines | Depends on | Summary |", "|---|---|---|---|---|---|---|---|",
     ( .slices | to_entries[] | .value as $s | "| \(.key + 1) | [\($s.title // $s.slug)](\($s.file)) | \($s.status) | \($s.priority) | \($s.requirement_ids | length) | \($s.lines) | \($s.depends_on | join(", ")) | \($s.summary) |" )' "$pack/index.json" > "$table"
-  [[ -f "$pack/00-index.md" ]] || { fill_tpl "$TPL/requirements-index.md.tmpl" "FEATURE=$feature" "TITLE=$feature" "SOURCE=n/a" | awk '$0=="{{OVERVIEW}}"{print "TODO"; next}{print}' > "$pack/00-index.md"; }
+  [[ -f "$pack/00-index.md" ]] || { fill_tpl "$TPL/requirements-index.template.md" "FEATURE=$feature" "TITLE=$feature" "SOURCE=n/a" | awk '$0=="{{OVERVIEW}}"{print "TODO"; next}{print}' > "$pack/00-index.md"; }
   awk -v tf="$table" '
     /<!-- slices:start/ { print; while ((getline l < tf) > 0) print l; skip=1; next }
     /<!-- slices:end/ { skip=0 }

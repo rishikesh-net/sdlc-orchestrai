@@ -52,7 +52,6 @@ PACK_ITEMS = [
     ("scripts/sdlc.cmd",                      "scripts/sdlc.cmd",                        False),
     ("scripts/sdlc.ps1",                      "scripts/sdlc.ps1",                        False),
     ("scripts/sdlc",                          "scripts/sdlc",                            False),
-    ("scripts/sync-skills.sh",                "scripts/sync-skills.sh",                  False),
     ("install.py",                            "install.py",                              False),
 ]
 

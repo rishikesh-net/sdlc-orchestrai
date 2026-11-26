@@ -63,7 +63,7 @@ Rules:
 
 Each phase is independently shippable and updates docs, tests, CI, and `install.py` in the same change.
 
-### Phase 0 — Guardrails (no behavior change)
+### Phase 0 — Guardrails (no behavior change) (implemented)
 - Add a CI matrix: `ubuntu-latest`, `windows-latest`, `macos-latest`.
 - Add contract/golden tests:
   - `scan-*.sh` -> SARIF/findings shape (extend `test_sarif.py`, `test_scan_sast.py`).
@@ -74,9 +74,9 @@ Each phase is independently shippable and updates docs, tests, CI, and `install.
 
 **Exit criteria:** matrix green; golden outputs captured; shadow harness documented.
 
-### Phase 1 — Zero-risk cleanup
+### Phase 1 — Zero-risk cleanup (implemented)
 - Delete `scripts/sync-skills.sh` (Python `sync-skills` already exists) and `skills/sdlc-session-handoff/scripts/sdlc-state.sh` (shim); update references to `python scripts/sdlc.py`.
-- Rename `skills/*/templates/*.md.tmpl` -> `*.template.md`; update `scripts/sdlc.py` template paths (pr-body, codebase-map) and all SKILL/reference mentions.
+- Rename `skills/*/templates/*.md.tmpl` -> `*.template.md`; update `scripts/sdlc.py`/`req-index.sh` template paths and all SKILL/reference mentions.
 - Move `test-scaffold.example.{cs,tsx}` into `skills/sdlc-feature-implementer/references/test-scaffolding.md` as fenced code blocks; update the SKILL.
 - Keep `scripts/sdlc.cmd`, `scripts/sdlc.ps1`, `scripts/sdlc`; add `.gitattributes` `linguist-vendored` for them.
 
@@ -164,9 +164,9 @@ Each phase is independently shippable and updates docs, tests, CI, and `install.
 - [ ] `scan.py` + delete 6 scan `.sh`
 - [ ] `backlog.py` + delete 5 backlog `.sh`; `jq` removed
 - [ ] `req_index.py` + delete `req-index.sh`; shadow parity
-- [ ] Delete `sync-skills.sh`, `sdlc-state.sh`, remaining `.sh`
+- [ ] Delete remaining `.sh` files (Phases 2-4)
 - [ ] Minimal `graph` / `backlog-to-graph` Python commands
-- [ ] Templates renamed to `*.template.md`; examples moved to Markdown
-- [ ] Launchers kept + `.gitattributes linguist-vendored`
+- [x] Templates renamed to `*.template.md`; examples moved to Markdown
+- [x] Launchers kept + `.gitattributes linguist-vendored`
 - [ ] Docs/CI/AGENTS/install.py updated
 - [ ] Zero skipped tests across OSes; language profile clean

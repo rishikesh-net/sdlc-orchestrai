@@ -58,8 +58,8 @@ tracker adapter (`github` or `local`; see `references/tracker-adapters.md`).
   Tracker selection and local ticket layout: `references/tracker-adapters.md`.
 
 ## Shared memory (cross-client continuity)
-- Start of session: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh resume`. If `docs/backlog/<feature>-backlog.json` already has `external.key` values, tickets were created: do not recreate, update instead.
-- After writing the backlog files: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh checkpoint --client <your-client> --feature <slug> --phase backlog --gate backlog=in-review --artifact docs/backlog/<slug>-backlog.json --artifact docs/backlog/<slug>-backlog.md --next "Human review of backlog; then dry-run push"`.
+- Start of session: `python scripts/sdlc.py resume`. If `docs/backlog/<feature>-backlog.json` already has `external.key` values, tickets were created: do not recreate, update instead.
+- After writing the backlog files: `python scripts/sdlc.py checkpoint --client <your-client> --feature <slug> --phase backlog --gate backlog=in-review --artifact docs/backlog/<slug>-backlog.json --artifact docs/backlog/<slug>-backlog.md --next "Human review of backlog; then dry-run push"`.
 - Load the backlog into the graph: `bash skills/sdlc-session-handoff/scripts/backlog-to-graph.sh --file docs/backlog/<slug>-backlog.json --apply`, then `bash skills/sdlc-session-handoff/scripts/sdlc-graph.sh gaps` to confirm every requirement is covered.
 - After the real push: re-run `backlog-to-graph.sh --apply` (to record ticket references), then checkpoint `--phase build --gate backlog=approved --gate issues=approved --next "Implement <first story id>"`. Commit the updated JSON (and local ticket files), and `.sdlc/`.
 
@@ -70,7 +70,7 @@ When requirements are a pack, break down **one slice at a time** so each backlog
 3. Write `docs/backlog/<feature>/<slice>-backlog.json` (and a matching `.md`). Each item's `req_refs` lists the slice's REQ-IDs; add cross-slice `depends_on` only for real prerequisites.
 4. Coverage: every REQ-ID of the slice appears in at least one item. Check with `bash skills/sdlc-session-handoff/scripts/backlog-to-graph.sh --file <file> --apply` then `sdlc-graph.sh gaps`.
 5. Dry-run and push per slice file (`push-backlog.sh --file docs/backlog/<feature>/<slice>-backlog.json --dry-run`). Slice epics can be pushed independently, in dependency order.
-6. Gate per slice: `bash skills/sdlc-session-handoff/scripts/sdlc-state.sh checkpoint --client <your-client> --feature <feature> --phase backlog --slice <slice> --gate backlog=in-review --artifact docs/backlog/<feature>/<slice>-backlog.json`.
+6. Gate per slice: `python scripts/sdlc.py checkpoint --client <your-client> --feature <feature> --phase backlog --slice <slice> --gate backlog=in-review --artifact docs/backlog/<feature>/<slice>-backlog.json`.
 7. Optional parallel breakdown: after per-slice design approval, the lead can run
    `python scripts/sdlc.py slices plan --feature <feature> --stage backlog`, dispatch one agent per work order,
    then `sdlc slices check --feature <feature> --stage backlog`. Subagents write only their

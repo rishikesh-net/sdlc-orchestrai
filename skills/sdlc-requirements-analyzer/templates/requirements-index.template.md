@@ -35,5 +35,5 @@
 
 1. Read this file (overview and slice table). Do not open every slice.
 2. Open `nfr.md` and `glossary.md` only if the slice you are working on depends on them.
-3. Work one slice at a time; checkpoint per slice (`sdlc-state.sh checkpoint --slice <slug> ...`).
+3. Work one slice at a time; checkpoint per slice (`python scripts/sdlc.py checkpoint --slice <slug> ...`).
 4. After editing any slice run `req-index.sh build` then `validate`.
