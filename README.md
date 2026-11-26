@@ -42,7 +42,7 @@ flowchart LR
   B -->|docs/requirements| C[sdlc-system-design]
   C -->|docs/design + ADRs| D[sdlc-security-review<br/>Mode A: threat model]
   D --> E[sdlc-backlog-breakdown]
-  E -->|backlog.json| F[push-backlog.sh<br/>dry-run, then apply]
+  E -->|backlog.json| F[backlog push<br/>dry-run, then apply]
   F --> G[Tracker tickets<br/>Local MD or GitHub]
   G --> H[sdlc-feature-implementer<br/>branch + TDD + code + PR]
   H --> I[sdlc-security-review<br/>Mode B + CI scans]
@@ -97,7 +97,7 @@ Edit only `skills/` and `AGENTS.md`. Running `python scripts/sdlc.py sync-skills
 ## Guardrails & CI
 
 - **Human gates between phases:** `python scripts/sdlc.py verify --gate <gate> --feature <slug>` validates `REQ-ID` uniqueness and cross-doc coverage before approval.
-- **Dry-run before side effects:** `push-backlog.sh` always requires `--dry-run` review before creating GitHub or local tickets.
+- **Dry-run before side effects:** `python scripts/sdlc.py backlog push` always requires `--dry-run` review before creating GitHub or local tickets.
 - **Security built in & configurable:** `.github/workflows/security.yml` auto-detects languages for CodeQL, runs `gitleaks`, `semgrep`, `zizmor`, `trivy` IaC scans, and dependency audits (`dotnet`, `npm`, `osv-scanner`), and uploads SARIF 2.1.0 artifacts. Every scanner is configurable (`auto` / `enabled` / `disabled`) in `.sdlc/config.yaml` under `security:`.
 - **Drift & state checks:** `.github/workflows/sync-check.yml` verifies skill generation, `state.json` schema validity, unit tests, and requirements packs.
 - **No secrets in docs or memory:** Reports cite `file:line` only.
@@ -110,7 +110,7 @@ Edit only `skills/` and `AGENTS.md`. Running `python scripts/sdlc.py sync-skills
 |---|---|
 | [GETTING_STARTED.md](GETTING_STARTED.md) | Step-by-step setup, first feature walkthrough (6 prompts), daily cheat sheet, and troubleshooting |
 | [skills/sdlc-requirements-analyzer/references/splitting-existing-docs.md](skills/sdlc-requirements-analyzer/references/splitting-existing-docs.md) | Splitting large (>40 REQ / >400 line) specs into vertical-slice packs with `req-index.sh` |
-| [skills/sdlc-backlog-breakdown/references/tracker-adapters.md](skills/sdlc-backlog-breakdown/references/tracker-adapters.md) | `local` vs. `github` tracker adapters and `push-backlog.sh` options |
+| [skills/sdlc-backlog-breakdown/references/tracker-adapters.md](skills/sdlc-backlog-breakdown/references/tracker-adapters.md) | `local` vs. `github` tracker adapters and `backlog push/pull` options |
 | [skills/sdlc-security-review/references/sarif.md](skills/sdlc-security-review/references/sarif.md) | Security scanner fallbacks (`python scripts/sdlc.py scan`) and SARIF 2.1.0 output |
 | [skills/sdlc-session-handoff/references/state-protocol.md](skills/sdlc-session-handoff/references/state-protocol.md) | Opt-in `resume` / `checkpoint` protocol when switching AI clients mid-feature |
 | [AGENTS.md](AGENTS.md) | Shared stack conventions, safety rules, and approval gates for all agents |

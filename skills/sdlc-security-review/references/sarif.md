@@ -81,7 +81,7 @@ JavaScript/TypeScript, Python), detected by the workflow's `detect` job.
 
 - `.sdlc/reports/<feature>-findings.json` — raw scanner evidence (this document). Regenerated on each run.
 - `docs/security/<name>-findings.json` — curated findings written by the agent after triage, in the
-  backlog schema, so `push-backlog.sh` can file them as issues.
+  backlog schema, so `python scripts/sdlc.py backlog push` can file them as issues.
 
 Never paste secret values into `docs/security/`; cite `file:line`, state the secret type, and recommend
 rotation.

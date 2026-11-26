@@ -42,7 +42,7 @@ Input: `docs/design/<feature>.md`. Output: `docs/security/<feature>-threats.md`.
    `severity:<level>`) for findings that will not be fixed in the current PR.
 6. Give the user a short verdict: Block / Fix before merge / Merge with follow-ups / Clean, plus the top 3 issues.
 7. STOP. With approval, fix specific findings. To file findings as GitHub issues, show a dry-run first:
-   `bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh --file docs/security/<name>-findings.json --dry-run`
+   `python scripts/sdlc.py backlog push --file docs/security/<name>-findings.json --dry-run`
 
 ## Severity rubric
 | Severity | Meaning | Examples |

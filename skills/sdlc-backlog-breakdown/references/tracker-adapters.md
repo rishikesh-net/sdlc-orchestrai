@@ -1,6 +1,6 @@
 # Tracker adapters and local tickets
 
-The backlog scripts work with more than GitHub. The neutral backlog JSON is the source of truth; an
+The backlog CLI works with more than GitHub. The neutral backlog JSON is the source of truth; an
 adapter turns each item into a ticket in the configured tracker.
 
 ## Configuration
@@ -22,8 +22,8 @@ local:
 Override without editing the file:
 
 ```bash
-SDLC_TRACKER=local bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh --file ... --dry-run
-bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh --file ... --tracker local --dry-run
+SDLC_TRACKER=local python scripts/sdlc.py backlog push --file ... --dry-run
+python scripts/sdlc.py backlog push --file ... --tracker local --dry-run
 ```
 
 Precedence: `--tracker` > `SDLC_TRACKER` > `tracker:` in config > `github`.
@@ -55,20 +55,24 @@ tracker: local
 
 - Idempotent: re-running updates the same file; existing `state` is preserved.
 - `external` becomes `{tracker: local, key: <id>, url: docs/backlog/tickets/<id>.md}`.
-- `pull-backlog.sh --tracker local` returns JSON with `number` set to the item id.
+- `python scripts/sdlc.py backlog pull --tracker local` returns JSON with `number` set to the item id.
 - Commit ticket files with the backlog JSON so offline planning is reviewable in git.
 
 ## Dry-run rules
 
-`push-backlog.sh --dry-run` never creates directories, files, issues, or project entries. It prints the
-same plan table as a real run and exits 0. Always dry-run and get approval before applying.
+`python scripts/sdlc.py backlog push --dry-run` never creates directories, files, issues, or project
+entries. It prints the same plan table as a real run and exits 0. Always dry-run and get approval
+before applying.
 
 ## Adding an adapter
 
-See `skills/sdlc-backlog-breakdown/scripts/adapters/README.md` for the function contract. Requirements:
+Implement a class in `skills/sdlc-backlog-breakdown/scripts/backlog.py` with the same methods as
+`LocalAdapter` and `GitHubAdapter`, then register it in `make_adapter()`. Requirements:
 
-- Implement the full contract (no-ops allowed) and set `ADAPTER_NAME`.
+- Implement the full interface (`describe`, `project_desc`, `dry_run_note`, `find`, `sync_labels`,
+  `create`, `update`, `refresh`, `link`, `project_add`, `pull`); no-ops are fine where a concept does
+  not apply.
 - Read credentials from environment variables only; never store them in config or reports.
 - Keep `--dry-run` side-effect free.
 - Be idempotent on backlog `id`; write back `external: {tracker, key, url}`.
-- Use `bl_jqr`/`bl_jqc` so Windows jq CRLF does not leak into ids, titles, or labels.
+- Use `json` and `pathlib` (no `jq`), and keep output CRLF-safe on Windows.

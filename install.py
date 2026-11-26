@@ -49,6 +49,7 @@ PACK_ITEMS = [
     ("skills",                                "skills",                                  True),
     (".sdlc/schema",                          ".sdlc/schema",                            True),
     ("scripts/sdlc.py",                       "scripts/sdlc.py",                         False),
+    ("scripts/sdlc_common.py",                "scripts/sdlc_common.py",                  False),
     ("scripts/sdlc.cmd",                      "scripts/sdlc.cmd",                        False),
     ("scripts/sdlc.ps1",                      "scripts/sdlc.ps1",                        False),
     ("scripts/sdlc",                          "scripts/sdlc",                            False),

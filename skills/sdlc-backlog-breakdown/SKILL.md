@@ -27,7 +27,7 @@ tracker adapter (`github` or `local`; see `references/tracker-adapters.md`).
 7. Write the `.md` and `.json` files. Then show the user a summary table (id, type, title, estimate,
    priority, depends_on) and the coverage result. STOP for approval.
 8. After approval, dry-run:
-   `bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh --file docs/backlog/<feature>-backlog.json --dry-run`
+   `python scripts/sdlc.py backlog push --file docs/backlog/<feature>-backlog.json --dry-run`
    Show the plan. STOP for approval again.
 9. Only after explicit approval, run the same command without `--dry-run`. The script writes ticket
    references (`external`) back into the JSON. Commit the updated JSON (and local ticket files when
@@ -54,7 +54,7 @@ tracker adapter (`github` or `local`; see `references/tracker-adapters.md`).
 - Acceptance criteria must be testable and observable. Include at least one negative/error case per story.
 - Do not invent requirements. Gaps go into a "Questions" section of the `.md`, not into stories.
 - Re-running the script must not create duplicates. If it reports a failure, fix the cause and re-run.
-- Prerequisites: `jq`, `git`; `gh` (authenticated) for `tracker: github`; nothing else for `tracker: local`.
+- Prerequisites: Python 3, `git`; `gh` (authenticated) for `tracker: github`; nothing else for `tracker: local`.
   Tracker selection and local ticket layout: `references/tracker-adapters.md`.
 
 ## Shared memory (cross-client continuity)
@@ -69,10 +69,10 @@ When requirements are a pack, break down **one slice at a time** so each backlog
 2. One epic per slice. Use slice-prefixed IDs so files never collide: `E-<PREFIX>`, `E-<PREFIX>-S1`, `E-<PREFIX>-T1`, `E-<PREFIX>-SP1`.
 3. Write `docs/backlog/<feature>/<slice>-backlog.json` (and a matching `.md`). Each item's `req_refs` lists the slice's REQ-IDs; add cross-slice `depends_on` only for real prerequisites.
 4. Coverage: every REQ-ID of the slice appears in at least one item. Check with `bash skills/sdlc-session-handoff/scripts/backlog-to-graph.sh --file <file> --apply` then `sdlc-graph.sh gaps`.
-5. Dry-run and push per slice file (`push-backlog.sh --file docs/backlog/<feature>/<slice>-backlog.json --dry-run`). Slice epics can be pushed independently, in dependency order.
+5. Dry-run and push per slice file (`python scripts/sdlc.py backlog push --file docs/backlog/<feature>/<slice>-backlog.json --dry-run`). Slice epics can be pushed independently, in dependency order.
 6. Gate per slice: `python scripts/sdlc.py checkpoint --client <your-client> --feature <feature> --phase backlog --slice <slice> --gate backlog=in-review --artifact docs/backlog/<feature>/<slice>-backlog.json`.
 7. Optional parallel breakdown: after per-slice design approval, the lead can run
    `python scripts/sdlc.py slices plan --feature <feature> --stage backlog`, dispatch one agent per work order,
    then `sdlc slices check --feature <feature> --stage backlog`. Subagents write only their
-   `docs/backlog/<feature>/<slice>-backlog.{json,md}` and notes; they must not run `push-backlog.sh` or checkpoint.
+   `docs/backlog/<feature>/<slice>-backlog.{json,md}` and notes; they must not run `backlog push` or checkpoint.
    The lead reconciles epics/dependencies, dry-runs, and pushes after human approval.

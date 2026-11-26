@@ -94,7 +94,7 @@ Each phase is independently shippable and updates docs, tests, CI, and `install.
 
 **Exit criteria:** all scanners run on Windows without bash; SARIF/findings unchanged; CI green.
 
-### Phase 3 — Backlog -> `backlog.py` (removes `jq`)
+### Phase 3 — Backlog -> `backlog.py` (removes `jq`) (implemented)
 - Implement `backlog.py` with `push` / `pull` and local/github adapters as Python modules/classes.
 - Preserve `--file`, `--dry-run`, `--only`, `--tracker`; idempotency via `external.key`; labels; parent/dependency linking; Projects add; JSON write-back; output table; dry-run note.
 - Use `subprocess.run(["gh", ...])` plus `json`; no `jq`.
@@ -160,9 +160,9 @@ Each phase is independently shippable and updates docs, tests, CI, and `install.
 ## 8. Deliverables checklist
 
 - [ ] CI matrix (ubuntu/windows/macos) + guard check
-- [ ] `scripts/sdlc_common.py`
+- [x] `scripts/sdlc_common.py`
 - [x] `scan.py` + delete 6 scan `.sh`
-- [ ] `backlog.py` + delete 5 backlog `.sh`; `jq` removed
+- [x] `backlog.py` + delete 5 backlog `.sh`; `jq` removed
 - [ ] `req_index.py` + delete `req-index.sh`; shadow parity
 - [ ] Delete remaining `.sh` files (Phases 2-4)
 - [ ] Minimal `graph` / `backlog-to-graph` Python commands

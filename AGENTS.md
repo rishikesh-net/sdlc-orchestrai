@@ -18,7 +18,7 @@ Requirement
   -> sdlc-system-design          -> docs/design/<feature>.md + ADRs           [review]
      + sdlc-security-review (Mode A: threat model)                             [review]
   -> sdlc-backlog-breakdown      -> docs/backlog/<feature>-backlog.md + .json [review]
-  -> push-backlog.sh --dry-run, then apply                                     [review]
+  -> python scripts/sdlc.py backlog push --dry-run, then apply                 [review]
   -> sdlc-feature-implementer    -> branch + TDD tests + code + draft PR       [review]
   -> sdlc-security-review (Mode B: diff/PR review) + CI scans                 [review]
   -> merge

@@ -12,7 +12,7 @@ Go from a fresh repository to your first feature flowing through requirements, s
 | **Git** | Branches and version control | `git --version` |
 | **An AI client** | Claude Code, Copilot, Cursor, OpenCode, or Antigravity | — |
 | **GitHub CLI (`gh`)** | *Optional* — only needed when pushing to GitHub Issues/PRs | `gh --version` |
-| **Git Bash / WSL** | *Windows only* — needed for `push-backlog.sh` and `req-index.sh` until their Python ports land | `bash --version` |
+| **Git Bash / WSL** | *Windows only* — needed for `req-index.sh` until its Python port lands | `bash --version` |
 
 Optional security/stack tools: `gitleaks`, `semgrep`, `trivy`, `osv-scanner`, `zizmor`, `dotnet`, `npm` (missing tools are reported clearly by `check-env` and never block setup; each scanner can be toggled in `.sdlc/config.yaml`).
 
@@ -114,11 +114,11 @@ Try a small, real feature first. **Review each artifact before moving to the nex
 ### Step 4: Dry Run, Then Create Tickets
 - **Preview first (writes nothing):**
   ```bash
-  bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh --file docs/backlog/<feature>-backlog.json --dry-run
+  python scripts/sdlc.py backlog push --file docs/backlog/<feature>-backlog.json --dry-run
   ```
 - **Apply when satisfied** (re-running is idempotent and updates instead of duplicating):
   ```bash
-  bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh --file docs/backlog/<feature>-backlog.json
+  python scripts/sdlc.py backlog push --file docs/backlog/<feature>-backlog.json
   ```
 
 ### Step 5: Implement Story to PR
@@ -151,7 +151,7 @@ Try a small, real feature first. **Review each artifact before moving to the nex
 | Check environment & config | `python scripts/sdlc.py check-env` |
 | Sync edited skills to clients | `python scripts/sdlc.py sync-skills` |
 | Verify gate & `REQ-ID` coverage | `python scripts/sdlc.py verify --gate <gate> --feature <slug>` |
-| Preview ticket creation | `bash skills/sdlc-backlog-breakdown/scripts/push-backlog.sh --file ... --dry-run` |
+| Preview ticket creation | `python scripts/sdlc.py backlog push --file ... --dry-run` |
 | Start implementing a story | `python scripts/sdlc.py story start E1-S1` |
 | Generate PR description | `python scripts/sdlc.py story pr-body E1-S1 --output .sdlc/pr-body.md` |
 | Run local security scans | `python scripts/sdlc.py scan --feature <slug>` |
@@ -175,6 +175,6 @@ Try a small, real feature first. **Review each artifact before moving to the nex
 | Antigravity wrapper reads `.agents/` | Run `SDLC_SYNC_EXTRA=".agents/skills" python scripts/sdlc.py sync-skills` |
 | `python` fails on Windows Store alias | Run via `scripts/sdlc.cmd <cmd>` (auto-detects installed Python) |
 | `gh CLI not installed or not authenticated` | Use `tracker: local` for offline tickets, or install `gh` and run `gh auth login` |
-| `jq is required` (Bash scripts) | Install `jq` (`winget install jqlang.jq`, `brew install jq`, `apt install jq`) |
+| `jq is required` (req-index.sh until Phase 4) | Install `jq` (`winget install jqlang.jq`, `brew install jq`, `apt install jq`) |
 | Windows `.sh` script errors | Run `.sh` scripts from Git Bash or WSL, not PowerShell/CMD |
 | Duplicate skills in OpenCode | Remove `.opencode/skills` from `scripts/sdlc.py` `sync-skills` targets (OpenCode also reads `.claude/skills/`) |

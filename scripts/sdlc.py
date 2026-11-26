@@ -187,15 +187,11 @@ def check_env(json_output: bool = False, strict: bool = False) -> int:
             else:
                 record("gh_cli", "warn", f"{first_line} installed but not authenticated (`gh auth login` required)", {"auth_err": auth_err or auth_out})
         else:
-            record("gh_cli", "warn", "GitHub CLI (`gh`) not found in PATH; required for push-backlog.sh")
+            record("gh_cli", "warn", "GitHub CLI (`gh`) not found in PATH; required for tracker: github")
     elif tracker == "local":
         local_cfg = config.get("local") if isinstance(config.get("local"), dict) else {}
         out_dir = (local_cfg or {}).get("output_dir") or "docs/backlog/tickets"
-        code_jq, out_jq, _ = run_cmd(["jq", "--version"])
-        if code_jq == 0:
-            record("tracker_local", "ok", f"Local Markdown tracker -> {out_dir} ({out_jq})", {"output_dir": out_dir})
-        else:
-            record("tracker_local", "warn", f"Local tracker configured but jq is missing; ticket files cannot be written (output_dir: {out_dir})")
+        record("tracker_local", "ok", f"Local Markdown tracker -> {out_dir}", {"output_dir": out_dir})
     else:
         record("tracker", "warn", f"Tracker '{tracker}' has no adapter yet; use github or local (or set SDLC_TRACKER)")
 
@@ -1239,6 +1235,43 @@ def cmd_scan(feature: str, strict: bool = False, only: str = "all") -> int:
     return module.main(argv)
 
 
+def cmd_backlog(action: str, **kwargs) -> int:
+    """Run the Python backlog adapters (push/pull) in-process."""
+    backlog_py = ROOT / "skills" / "sdlc-backlog-breakdown" / "scripts" / "backlog.py"
+    if not backlog_py.is_file():
+        print(f"ERROR: backlog module not found: {backlog_py}", file=sys.stderr)
+        return 1
+
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("sdlc_backlog", backlog_py)
+    if spec is None or spec.loader is None:
+        print(f"ERROR: could not load backlog module: {backlog_py}", file=sys.stderr)
+        return 1
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: could not load backlog module: {exc}", file=sys.stderr)
+        return 1
+
+    argv = [action]
+    if action == "push":
+        argv.extend(["--file", kwargs["file"]])
+        if kwargs.get("dry_run"):
+            argv.append("--dry-run")
+        if kwargs.get("only"):
+            argv.extend(["--only", kwargs["only"]])
+    else:
+        argv.extend(["--state", kwargs.get("state", "open")])
+        if kwargs.get("label"):
+            argv.extend(["--label", kwargs["label"]])
+        argv.extend(["--limit", str(kwargs.get("limit", "200"))])
+    if kwargs.get("tracker"):
+        argv.extend(["--tracker", kwargs["tracker"]])
+    return module.main(argv)
+
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -1264,6 +1297,20 @@ def main():
     p_scan.add_argument("--feature", default=os.environ.get("SDLC_FEATURE", "repo"), help="Feature/report slug (default: repo)")
     p_scan.add_argument("--only", choices=["all", "secrets", "sast", "deps", "iac"], default="all", help="Run one scanner group (default: all)")
     p_scan.add_argument("--strict", action="store_true", help="Return error code when findings exist")
+
+    # backlog
+    p_backlog = subparsers.add_parser("backlog", help="Push or pull tracker tickets")
+    backlog_subs = p_backlog.add_subparsers(dest="backlog_action")
+    p_bl_push = backlog_subs.add_parser("push", help="Create/update tickets from a backlog JSON")
+    p_bl_push.add_argument("--file", required=True, help="Backlog JSON path")
+    p_bl_push.add_argument("--dry-run", action="store_true", help="Show the plan without writing")
+    p_bl_push.add_argument("--only", help="Limit to one epic and its children")
+    p_bl_push.add_argument("--tracker", help="Tracker override (github|local)")
+    p_bl_pull = backlog_subs.add_parser("pull", help="List existing tickets as a JSON array")
+    p_bl_pull.add_argument("--state", choices=["open", "closed", "all"], default="open")
+    p_bl_pull.add_argument("--label", default="", help="Filter by label")
+    p_bl_pull.add_argument("--limit", default="200", help="Maximum rows (default: 200)")
+    p_bl_pull.add_argument("--tracker", default=None, help="Tracker override (github|local)")
 
     # story
     p_story = subparsers.add_parser("story", help="Manage story implementation lifecycle")
@@ -1336,6 +1383,20 @@ def main():
         sys.exit(verify_gate(gate=args.gate, feature=args.feature, json_output=args.json))
     elif args.subcommand == "scan":
         sys.exit(cmd_scan(feature=args.feature, strict=args.strict, only=args.only))
+    elif args.subcommand == "backlog":
+        if args.backlog_action == "push":
+            sys.exit(cmd_backlog(
+                "push", file=args.file, dry_run=args.dry_run,
+                only=args.only, tracker=args.tracker,
+            ))
+        elif args.backlog_action == "pull":
+            sys.exit(cmd_backlog(
+                "pull", state=args.state, label=args.label,
+                limit=args.limit, tracker=args.tracker,
+            ))
+        else:
+            p_backlog.print_help()
+            sys.exit(1)
     elif args.subcommand == "story":
         if args.story_action == "show":
             sys.exit(cmd_story_show(story_id=args.story_id, feature=args.feature, json_output=args.json))
