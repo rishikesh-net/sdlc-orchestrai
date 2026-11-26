@@ -111,6 +111,6 @@ Edit only `skills/` and `AGENTS.md`. Running `python scripts/sdlc.py sync-skills
 | [GETTING_STARTED.md](GETTING_STARTED.md) | Step-by-step setup, first feature walkthrough (6 prompts), daily cheat sheet, and troubleshooting |
 | [skills/sdlc-requirements-analyzer/references/splitting-existing-docs.md](skills/sdlc-requirements-analyzer/references/splitting-existing-docs.md) | Splitting large (>40 REQ / >400 line) specs into vertical-slice packs with `req-index.sh` |
 | [skills/sdlc-backlog-breakdown/references/tracker-adapters.md](skills/sdlc-backlog-breakdown/references/tracker-adapters.md) | `local` vs. `github` tracker adapters and `push-backlog.sh` options |
-| [skills/sdlc-security-review/references/sarif.md](skills/sdlc-security-review/references/sarif.md) | Security scanner fallbacks (`scan-all.sh` / `sdlc scan`) and SARIF 2.1.0 output |
+| [skills/sdlc-security-review/references/sarif.md](skills/sdlc-security-review/references/sarif.md) | Security scanner fallbacks (`scan-all.sh` / `python scripts/sdlc.py scan`) and SARIF 2.1.0 output |
 | [skills/sdlc-session-handoff/references/state-protocol.md](skills/sdlc-session-handoff/references/state-protocol.md) | Opt-in `resume` / `checkpoint` protocol when switching AI clients mid-feature |
 | [AGENTS.md](AGENTS.md) | Shared stack conventions, safety rules, and approval gates for all agents |

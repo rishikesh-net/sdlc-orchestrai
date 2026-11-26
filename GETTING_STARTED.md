@@ -61,7 +61,7 @@ Use `--dry-run` to preview only (it **copies nothing**), `-t <dir>` to target an
    python scripts/sdlc.py check-env
    python scripts/sdlc.py sync-skills
    ```
-   *(Shortcuts: `scripts/sdlc.cmd` on Windows, `./scripts/sdlc` on macOS/Linux.)*
+   *(Shortcuts: `scripts/sdlc.cmd` on Windows, `./scripts/sdlc` on macOS/Linux. There is no global `sdlc` command — always run it from the repo root via the script or a shortcut, e.g. `python scripts/sdlc.py init`.)*
 
 4. **Verify your AI client sees the skills** by opening the repo and asking:
    > *"Which sdlc- skills do you have available?"*

@@ -12,8 +12,8 @@ Client-native memory is siloed. This skill keeps optional project memory **in th
 ## Files (committed to git when used)
 | File | Purpose | Written by |
 |---|---|---|
-| `.sdlc/state.json` | Per-feature phase, gate statuses, next action, open questions, artifacts, notes | `sdlc checkpoint` |
-| `.sdlc/HANDOFF.md` | Human-readable "where we left off" (generated from `state.json`; never edit by hand) | `sdlc render` |
+| `.sdlc/state.json` | Per-feature phase, gate statuses, next action, open questions, artifacts, notes | `python scripts/sdlc.py checkpoint` |
+| `.sdlc/HANDOFF.md` | Human-readable "where we left off" (generated from `state.json`; never edit by hand) | `python scripts/sdlc.py render` |
 | `.sdlc/memory/codebase-map.md` | Compact map of the repo so new sessions avoid full rescans | the agent |
 
 CLI: `scripts/sdlc` / `scripts/sdlc.cmd` (or `python scripts/sdlc.py`, with `sdlc-state.sh` as a compatibility shim).

@@ -65,23 +65,23 @@ Implement the minimal code required to make tests pass:
 Run automated tests and builds locally:
 - Backend: `dotnet test`
 - Frontend: `npm test` or `pnpm test`
-- Gate check: `sdlc verify --gate implementation`
+- Gate check: `python scripts/sdlc.py verify --gate implementation`
 Assert that all tests pass and no regression was introduced.
 
 ### Step 6: PR Preparation & Conventional Commits
 1. Commit changes using conventional commits:
    `git commit -m "feat(<component>): <short description> (closes #<issue>, implements <story-id>, REQ-<id>)"`
 2. Generate PR body from story metadata:
-   `sdlc story pr-body <story-id> [--feature <feature>] > .sdlc/pr-body.md`
+   `python scripts/sdlc.py story pr-body <story-id> [--feature <feature>] > .sdlc/pr-body.md`
 3. Push feature branch:
    `git push -u origin feat/<issue-or-story-id>-<slug>`
 4. Open the Pull Request:
    `gh pr create --body-file .sdlc/pr-body.md` (or provide the PR creation link)
 5. Checkpoint the session handoff:
-   `sdlc checkpoint --feature <slug> --phase implementation --gate implementation=in-review --artifact .sdlc/pr-body.md --next "Run sdlc-security-review Mode B on PR"`
+   `python scripts/sdlc.py checkpoint --feature <slug> --phase implementation --gate implementation=in-review --artifact .sdlc/pr-body.md --next "Run sdlc-security-review Mode B on PR"`
 
 ---
 
 ## Shared Memory Protocol
-- **Resume**: At the start of an implementation turn, run `sdlc resume`. Verify recorded branch matches current git branch.
-- **Checkpoint**: Whenever stepping away or completing a story, run `sdlc checkpoint --feature <slug> --branch <branch> --note "Story <id> implementation completed; PR opened"`.
+- **Resume**: At the start of an implementation turn, run `python scripts/sdlc.py resume`. Verify recorded branch matches current git branch.
+- **Checkpoint**: Whenever stepping away or completing a story, run `python scripts/sdlc.py checkpoint --feature <slug> --branch <branch> --note "Story <id> implementation completed; PR opened"`.
