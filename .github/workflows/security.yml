@@ -83,7 +83,7 @@ jobs:
       - name: SARIF converter tests
         run: python -m unittest discover -s scripts/tests -v
       - name: Install scanners
-        run: pip install semgrep
+        run: pip install semgrep zizmor
       - name: Run security scanners
         continue-on-error: true
         run: bash skills/sdlc-security-review/scripts/scan-all.sh --feature ci
@@ -150,3 +150,33 @@ jobs:
         with:
           sarif_file: codeql-${{ matrix.language }}.sarif
           category: "/language:${{ matrix.language }}"
+
+  iac:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy IaC & config scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: sarif
+          output: trivy-iac.sarif
+          skip-dirs: node_modules,.git,.sdlc,bin,obj,dist,build
+      - name: Save Trivy SARIF (artifact)
+        if: always() && hashFiles('trivy-iac.sarif') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-iac-sarif
+          path: trivy-iac.sarif
+          if-no-files-found: ignore
+      - name: Upload Trivy SARIF to Code Scanning
+        if: always() && hashFiles('trivy-iac.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-iac.sarif
+          category: trivy-iac

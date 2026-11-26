@@ -12,6 +12,26 @@ local:
   # Offline Markdown tickets (tracker: local). Relative to the repo root.
   output_dir: docs/backlog/tickets
 
+# Security scanner configuration (Phase 1+ configurable scanners)
+# Modes: auto (run if installed, skip otherwise) | enabled (warn/fail if missing) | disabled (skip)
+security:
+  strict: false                 # true = exit 1 on any finding (overridden by SDLC_STRICT=1 or --strict)
+  scanners:
+    gitleaks: auto
+    trufflehog: auto
+    semgrep: auto
+    trivy: auto                 # IaC / container / filesystem (scan-iac.sh)
+    osv_scanner: auto           # Lockfile SCA across NuGet, npm, PyPI (scan-deps.sh)
+    zizmor: auto                # GitHub Actions workflow security (scan-sast.sh)
+    dotnet: auto                # dotnet list package --vulnerable
+    npm_audit: auto             # npm audit --audit-level=high
+    roslyn: auto                # .NET CA*/SCS* SARIF during build (opt-in / deep)
+    eslint_sdl: auto            # React ESLint SDL (when configured in package.json)
+    squawk: auto                # PostgreSQL migration SQL linter
+  optional:
+    pytm: false                 # Mode A threat-model-as-code helper
+    zap_ci_dast: false          # CI-only ephemeral OpenAPI DAST
+
 # Credentials for future adapters must come from environment variables, never this file:
 #   JIRA_BASE_URL / JIRA_EMAIL / JIRA_API_TOKEN
 #   LINEAR_API_KEY

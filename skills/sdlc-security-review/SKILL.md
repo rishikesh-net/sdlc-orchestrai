@@ -26,7 +26,7 @@ Input: `docs/design/<feature>.md`. Output: `docs/security/<feature>-threats.md`.
 2. Run the deterministic scans. They write SARIF 2.1.0 and normalized findings to `.sdlc/reports/`
    (never secret values). `--feature <slug>` names the report; default `repo`.
    - `bash skills/sdlc-security-review/scripts/scan-all.sh --feature <slug>` (all scanners, merged)
-   - or one at a time: `scan-secrets.sh`, `scan-deps.sh`, `scan-sast.sh`
+   - or one at a time: `scan-secrets.sh`, `scan-deps.sh`, `scan-sast.sh`, `scan-iac.sh`
    Read `.sdlc/reports/<slug>-findings.json` (`scanners[]` says ran/fallback/skipped) and, if triaging
    inline annotations, `.sdlc/reports/<slug>-findings.sarif`. See `references/sarif.md` for the output
    contract and severity mapping. Treat heuristic-only findings (`confidence: needs-verification`) as

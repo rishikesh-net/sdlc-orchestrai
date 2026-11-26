@@ -33,5 +33,6 @@ run_scan() {
 run_scan scan-secrets.sh
 run_scan scan-sast.sh
 run_scan scan-deps.sh
+run_scan scan-iac.sh
 
 scan_finish all all

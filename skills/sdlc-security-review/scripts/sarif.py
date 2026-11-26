@@ -291,6 +291,137 @@ def from_lines(text: str, scanner: str, root: Optional[Path]) -> List[Dict[str, 
     return findings
 
 
+def from_sarif(data: Any, scanner: str, root: Optional[Path]) -> List[Dict[str, Any]]:
+    """Ingest external SARIF 2.1.0 output (Trivy, OSV-Scanner, zizmor, Roslyn, etc.)."""
+    out = []
+    if not isinstance(data, dict):
+        return out
+    for run in data.get("runs") or []:
+        if not isinstance(run, dict):
+            continue
+        rules_by_id: Dict[str, Dict[str, Any]] = {}
+        driver = (run.get("tool") or {}).get("driver") or {}
+        for r in driver.get("rules") or []:
+            if isinstance(r, dict) and r.get("id"):
+                rules_by_id[str(r["id"])] = r
+        for res in run.get("results") or []:
+            if not isinstance(res, dict):
+                continue
+            rule_id = str(res.get("ruleId") or "finding")
+            rule_meta = rules_by_id.get(rule_id) or {}
+            props = {**(rule_meta.get("properties") or {}), **(res.get("properties") or {})}
+            sev_raw = props.get("severity")
+            if not sev_raw and props.get("security-severity") is not None:
+                try:
+                    score = float(props["security-severity"])
+                    sev_raw = "critical" if score >= 9.0 else "high" if score >= 7.0 else "medium" if score >= 4.0 else "low"
+                except (TypeError, ValueError):
+                    sev_raw = None
+            if not sev_raw:
+                level = str(res.get("level") or (rule_meta.get("defaultConfiguration") or {}).get("level") or "warning").lower()
+                sev_raw = LEVEL_TO_SEVERITY.get(level, "medium")
+
+            locs = res.get("locations") or []
+            phys = (locs[0].get("physicalLocation") or {}) if locs and isinstance(locs[0], dict) else {}
+            uri = str((phys.get("artifactLocation") or {}).get("uri") or ".")
+            if uri.startswith("file:///"):
+                uri = uri[8:] if len(uri) > 10 and uri[9] == ":" else uri[7:]
+            elif uri.startswith("file://"):
+                uri = uri[7:]
+            region = phys.get("region") or {}
+            line_no = as_int(region.get("startLine"), 1)
+            msg = str((res.get("message") or {}).get("text") or (rule_meta.get("shortDescription") or {}).get("text") or rule_id)
+            out.append(finding(
+                scanner=scanner,
+                rule=f"{scanner}.{rule_id}" if not rule_id.startswith(f"{scanner}.") else rule_id,
+                severity=sev_raw,
+                file=rel_path(uri, root),
+                line=line_no,
+                message=msg,
+                confidence="likely",
+            ))
+    return out
+
+
+DEFAULT_SECURITY_SCANNERS = {
+    "gitleaks": "auto",
+    "trufflehog": "auto",
+    "semgrep": "auto",
+    "trivy": "auto",
+    "osv_scanner": "auto",
+    "zizmor": "auto",
+    "dotnet": "auto",
+    "npm_audit": "auto",
+    "roslyn": "auto",
+    "eslint_sdl": "auto",
+    "squawk": "auto",
+}
+
+
+def load_security_config(config_path: Path) -> Dict[str, Any]:
+    """Read the `security:` block from .sdlc/config.yaml using stdlib only."""
+    cfg: Dict[str, Any] = {
+        "strict": False,
+        "scanners": dict(DEFAULT_SECURITY_SCANNERS),
+    }
+    if not config_path.is_file():
+        return cfg
+    in_security = False
+    sec_indent = -1
+    sub_section: Optional[str] = None
+    sub_indent = -1
+    try:
+        lines = config_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return cfg
+
+    for raw in lines:
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if " #" in stripped:
+            stripped = stripped.split(" #", 1)[0].strip()
+        indent = len(raw) - len(raw.lstrip(" \t"))
+        if not in_security:
+            if indent == 0 and stripped.startswith("security:"):
+                in_security = True
+                sec_indent = indent
+            continue
+        if indent <= sec_indent:
+            break
+        if ":" not in stripped:
+            continue
+        k, v = [p.strip() for p in stripped.split(":", 1)]
+        v = v.strip("\"'")
+        if v == "":
+            sub_section = k
+            sub_indent = indent
+            continue
+        if sub_section and indent > sub_indent:
+            if sub_section == "scanners" and k in cfg["scanners"]:
+                mode = v.lower()
+                if mode in ("auto", "enabled", "disabled"):
+                    cfg["scanners"][k] = mode
+        else:
+            sub_section = None
+            if k == "strict":
+                cfg["strict"] = v.lower() in ("true", "1", "yes")
+    return cfg
+
+
+def cmd_config(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve() if args.root else Path.cwd()
+    cfg = load_security_config(root / ".sdlc" / "config.yaml")
+    if args.shell:
+        print(f"SDLC_CONFIG_STRICT={'1' if cfg['strict'] else '0'}")
+        for name, mode in cfg["scanners"].items():
+            env_name = f"SDLC_SEC_{name.upper()}"
+            print(f"{env_name}={mode}")
+    else:
+        print(json.dumps(cfg, indent=2))
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # SARIF / JSON writers
 # ---------------------------------------------------------------------------
@@ -524,6 +655,8 @@ def cmd_convert(args: argparse.Namespace) -> int:
                     findings = from_npm_audit(data, scanner, root, args.package_path)
                 elif args.type == "dotnet":
                     findings = from_dotnet(data, scanner, root)
+                elif args.type == "sarif":
+                    findings = from_sarif(data, scanner, root)
                 else:
                     print(f"ERROR: unknown --type {args.type}", file=sys.stderr)
                     return 2
@@ -568,7 +701,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("convert", help="Convert one tool's output into per-scanner SARIF + JSON")
-    p.add_argument("--type", required=True, choices=["semgrep", "gitleaks", "trufflehog", "npm-audit", "dotnet", "lines", "none"])
+    p.add_argument("--type", required=True, choices=["semgrep", "gitleaks", "trufflehog", "npm-audit", "dotnet", "lines", "sarif", "none"])
     p.add_argument("--input", help="Raw tool output file ('-' for stdin)")
     p.add_argument("--append", action="store_true", help="Append to an existing per-scanner findings file")
     p.add_argument("--scanner", required=True, help="Scanner name, e.g. semgrep, gitleaks, heuristic-sast")
@@ -594,6 +727,11 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     p = sub.add_parser("validate", help="Structurally validate a SARIF file")
     p.add_argument("path")
     p.set_defaults(func=lambda a: validate_sarif(Path(a.path)))
+
+    p = sub.add_parser("config", help="Read security scanner settings from .sdlc/config.yaml")
+    p.add_argument("--root", default=".")
+    p.add_argument("--shell", action="store_true", help="Emit safe KEY=VALUE lines for shell eval")
+    p.set_defaults(func=cmd_config)
 
     args = parser.parse_args(list(argv) if argv is not None else None)
     return args.func(args)
