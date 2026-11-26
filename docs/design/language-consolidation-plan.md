@@ -82,9 +82,9 @@ Each phase is independently shippable and updates docs, tests, CI, and `install.
 
 **Exit criteria:** `Go Template`, `C#`, `TypeScript` no longer counted (0%); Shell reduced; no behavior change; tests green.
 
-### Phase 2 — Security scanners -> `scan.py`
+### Phase 2 — Security scanners -> `scan.py` (implemented)
 - Implement `scan.py` with `secrets|sast|deps|iac|all`, `--feature`, `--strict`, `--only`.
-- Reuse `sarif.py` by import (refactor import-safe) and `sdlc_common.py` for config/root.
+- Reuse `sarif.py` by import for config and conversion; shared `scripts/sdlc_common.py` is deferred until Phase 3 (backlog) needs it.
 - Preserve external scanners and `auto|enabled|disabled` config from `.sdlc/config.yaml` (`scan_load_config`/`scan_mode` behavior), rule IDs/severities/messages, and `ran|fallback|skipped` statuses.
 - Replace `git grep | cut | while read` heuristics with Python `re` over `git grep -l` / `git ls-files`; skip `.git`, `node_modules`, `bin`, `obj`, `dist`, `build`.
 - `scripts/sdlc.py scan` calls the module in-process; remove the `bash` call and the "install Git Bash" error (`scripts/sdlc.py:1218-1229`).
@@ -161,7 +161,7 @@ Each phase is independently shippable and updates docs, tests, CI, and `install.
 
 - [ ] CI matrix (ubuntu/windows/macos) + guard check
 - [ ] `scripts/sdlc_common.py`
-- [ ] `scan.py` + delete 6 scan `.sh`
+- [x] `scan.py` + delete 6 scan `.sh`
 - [ ] `backlog.py` + delete 5 backlog `.sh`; `jq` removed
 - [ ] `req_index.py` + delete `req-index.sh`; shadow parity
 - [ ] Delete remaining `.sh` files (Phases 2-4)

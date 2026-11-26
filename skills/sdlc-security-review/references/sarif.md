@@ -19,14 +19,14 @@ a feature review and `ci` in automation.
 
 ```bash
 # all scanners, then merge (recommended)
-bash skills/sdlc-security-review/scripts/scan-all.sh --feature <slug>
-python scripts/sdlc.py scan --feature <slug>          # same via the cross-platform CLI
+python scripts/sdlc.py scan --feature <slug>
+python skills/sdlc-security-review/scripts/scan.py all --feature <slug>   # same, direct
 
-# one scanner
-bash skills/sdlc-security-review/scripts/scan-secrets.sh --feature <slug>
-bash skills/sdlc-security-review/scripts/scan-sast.sh --feature <slug>
-bash skills/sdlc-security-review/scripts/scan-deps.sh --feature <slug>
-bash skills/sdlc-security-review/scripts/scan-iac.sh --feature <slug>
+# one scanner group
+python scripts/sdlc.py scan --only secrets --feature <slug>
+python scripts/sdlc.py scan --only sast --feature <slug>
+python scripts/sdlc.py scan --only deps --feature <slug>
+python scripts/sdlc.py scan --only iac --feature <slug>
 
 # report helpers
 python skills/sdlc-security-review/scripts/sarif.py validate .sdlc/reports/<slug>-findings.sarif
@@ -34,7 +34,7 @@ python skills/sdlc-security-review/scripts/sarif.py count --feature <slug> --out
 ```
 
 Exit codes: `0` by default even with findings; `SDLC_STRICT=1` (or `--strict`) returns `1` when the
-invoked scanner has findings. `scan-all.sh` aggregates all scanners.
+invoked scanner has findings. The default `all` command aggregates every scanner.
 
 ## Tool fallbacks
 
@@ -67,7 +67,7 @@ findings are medium/low confidence and should be confirmed manually before filin
 
 ## GitHub Code Scanning
 
-`.github/workflows/security.yml` runs `scan-all.sh --feature ci` on pull requests and uploads
+`.github/workflows/security.yml` runs `python scripts/sdlc.py scan --feature ci` on pull requests and uploads
 `ci-findings.sarif` with `category: sdlc-scanners`. The job is **non-blocking**: upload gives reviewers
 inline annotations, while CodeQL and `SDLC_STRICT=1` jobs remain the enforcement layer.
 

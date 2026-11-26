@@ -20,9 +20,9 @@ security:
     gitleaks: auto
     trufflehog: auto
     semgrep: auto
-    trivy: auto                 # IaC / container / filesystem (scan-iac.sh)
-    osv_scanner: auto           # Lockfile SCA across NuGet, npm, PyPI (scan-deps.sh)
-    zizmor: auto                # GitHub Actions workflow security (scan-sast.sh)
+    trivy: auto                 # IaC / container / filesystem (scan.py iac)
+    osv_scanner: auto           # Lockfile SCA across NuGet, npm, PyPI (scan.py deps)
+    zizmor: auto                # GitHub Actions workflow security (scan.py sast)
     dotnet: auto                # dotnet list package --vulnerable
     npm_audit: auto             # npm audit --audit-level=high
     roslyn: auto                # .NET CA*/SCS* SARIF during build (opt-in / deep)

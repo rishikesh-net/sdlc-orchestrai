@@ -1213,22 +1213,30 @@ def cmd_validate() -> int:
     return 0
 
 
-def cmd_scan(feature: str, strict: bool = False) -> int:
-    """Run the security scanners via the deterministic shell scripts, writing SARIF + JSON."""
-    script = ROOT / "skills" / "sdlc-security-review" / "scripts" / "scan-all.sh"
-    if not script.is_file():
-        print(f"ERROR: scanner script not found: {script}", file=sys.stderr)
+def cmd_scan(feature: str, strict: bool = False, only: str = "all") -> int:
+    """Run the Python security scanners, writing SARIF + normalized findings JSON."""
+    scan_py = ROOT / "skills" / "sdlc-security-review" / "scripts" / "scan.py"
+    if not scan_py.is_file():
+        print(f"ERROR: scanner not found: {scan_py}", file=sys.stderr)
         return 1
-    rel_script = script.relative_to(ROOT).as_posix()
-    cmd = ["bash", rel_script, "--feature", feature]
-    if strict:
-        cmd.append("--strict")
+
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("sdlc_scan", scan_py)
+    if spec is None or spec.loader is None:
+        print(f"ERROR: could not load scanner: {scan_py}", file=sys.stderr)
+        return 1
+    module = importlib.util.module_from_spec(spec)
     try:
-        proc = subprocess.run(cmd, cwd=str(ROOT))
-    except FileNotFoundError:
-        print("ERROR: bash not found; install Git Bash or WSL (or run the scripts directly)", file=sys.stderr)
-        return 127
-    return proc.returncode
+        spec.loader.exec_module(module)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: could not load scanner: {exc}", file=sys.stderr)
+        return 1
+
+    argv = [only, "--feature", feature]
+    if strict:
+        argv.append("--strict")
+    return module.main(argv)
 
 
 
@@ -1254,6 +1262,7 @@ def main():
     # scan
     p_scan = subparsers.add_parser("scan", help="Run security scanners and write SARIF + findings JSON")
     p_scan.add_argument("--feature", default=os.environ.get("SDLC_FEATURE", "repo"), help="Feature/report slug (default: repo)")
+    p_scan.add_argument("--only", choices=["all", "secrets", "sast", "deps", "iac"], default="all", help="Run one scanner group (default: all)")
     p_scan.add_argument("--strict", action="store_true", help="Return error code when findings exist")
 
     # story
@@ -1326,7 +1335,7 @@ def main():
     elif args.subcommand == "verify":
         sys.exit(verify_gate(gate=args.gate, feature=args.feature, json_output=args.json))
     elif args.subcommand == "scan":
-        sys.exit(cmd_scan(feature=args.feature, strict=args.strict))
+        sys.exit(cmd_scan(feature=args.feature, strict=args.strict, only=args.only))
     elif args.subcommand == "story":
         if args.story_action == "show":
             sys.exit(cmd_story_show(story_id=args.story_id, feature=args.feature, json_output=args.json))

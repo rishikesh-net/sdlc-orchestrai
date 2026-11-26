@@ -58,6 +58,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x          # TODO: set to your project's SDK version
@@ -65,9 +68,9 @@ jobs:
         with:
           node-version: 20               # TODO: set to your frontend's Node version
       - name: Vulnerable dependencies (NuGet + npm)
-        run: SDLC_STRICT=1 bash skills/sdlc-security-review/scripts/scan-deps.sh
+        run: SDLC_STRICT=1 python scripts/sdlc.py scan --only deps
 
-  # Publishes SARIF from the same scripts agents run locally. Findings land in Security > Code
+  # Publishes SARIF from the same scanners agents run locally. Findings land in Security > Code
   # scanning for triage when available; otherwise the SARIF is kept as a workflow artifact.
   # CodeQL below remains the primary SAST gate.
   scans:
@@ -86,7 +89,7 @@ jobs:
         run: pip install semgrep zizmor
       - name: Run security scanners
         continue-on-error: true
-        run: bash skills/sdlc-security-review/scripts/scan-all.sh --feature ci
+        run: python scripts/sdlc.py scan --feature ci
       - name: Save SARIF report (artifact)
         if: always() && hashFiles('.sdlc/reports/ci-findings.sarif') != ''
         uses: actions/upload-artifact@v4

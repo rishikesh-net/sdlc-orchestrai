@@ -12,7 +12,7 @@ Go from a fresh repository to your first feature flowing through requirements, s
 | **Git** | Branches and version control | `git --version` |
 | **An AI client** | Claude Code, Copilot, Cursor, OpenCode, or Antigravity | — |
 | **GitHub CLI (`gh`)** | *Optional* — only needed when pushing to GitHub Issues/PRs | `gh --version` |
-| **Git Bash / WSL** | *Windows only* — needed for `push-backlog.sh`, `req-index.sh`, `scan-*.sh` | `bash --version` |
+| **Git Bash / WSL** | *Windows only* — needed for `push-backlog.sh` and `req-index.sh` until their Python ports land | `bash --version` |
 
 Optional security/stack tools: `gitleaks`, `semgrep`, `trivy`, `osv-scanner`, `zizmor`, `dotnet`, `npm` (missing tools are reported clearly by `check-env` and never block setup; each scanner can be toggled in `.sdlc/config.yaml`).
 

@@ -1,12 +1,10 @@
-"""Contract test for the merged scanner report produced by scan-all.sh.
+"""Contract test for the merged scanner report produced by scan.py.
 
 Runs with every configurable scanner disabled so the test is deterministic and
 does not depend on which external tools are installed. It exercises config
 loading, per-scanner skip records, report merging, and SARIF validity.
 
-POSIX/CI only (bash + jq). The Python port in Phase 2 will run on Windows too.
-
-Run: python -m unittest discover -s scripts/tests -v
+Runs on Windows, macOS, and Linux (git is the only requirement).
 """
 
 import json
@@ -19,7 +17,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SCAN_ALL = ROOT / "skills" / "sdlc-security-review" / "scripts" / "scan-all.sh"
+SCAN_PY = ROOT / "skills" / "sdlc-security-review" / "scripts" / "scan.py"
 SARIF_PY = ROOT / "skills" / "sdlc-security-review" / "scripts" / "sarif.py"
 
 DISABLED_CONFIG = """\
@@ -45,17 +43,7 @@ SECRETS_SCANNERS = {"gitleaks", "trufflehog", "heuristic-secrets"}
 ALLOWED_STATUSES = {"ran", "fallback", "skipped"}
 
 
-def _posix_tools_available() -> bool:
-    return (
-        os.name != "nt"
-        and shutil.which("bash") is not None
-        and shutil.which("jq") is not None
-        and shutil.which("git") is not None
-    )
-
-
-@unittest.skipIf(os.name == "nt", "scan-all.sh requires POSIX bash paths until Phase 2")
-@unittest.skipIf(not _posix_tools_available(), "bash, jq, and git are required")
+@unittest.skipIf(shutil.which("git") is None, "git is required")
 class ScanAllContractTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="sdlc-scan-all-"))
@@ -72,13 +60,12 @@ class ScanAllContractTests(unittest.TestCase):
     def test_merged_report_contract_with_scanners_disabled(self):
         env = os.environ.copy()
         env["SDLC_SCAN_ROOT"] = str(self.tmp)
-        env["SDLC_PYTHON"] = sys.executable
         env["PYTHONIOENCODING"] = "utf-8"
         for key in ("SDLC_STRICT", "SDLC_FEATURE"):
             env.pop(key, None)
 
         proc = subprocess.run(
-            ["bash", str(SCAN_ALL), "--feature", "contract"],
+            [sys.executable, str(SCAN_PY), "all", "--feature", "contract"],
             cwd=str(self.tmp), capture_output=True, text=True, env=env,
         )
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
