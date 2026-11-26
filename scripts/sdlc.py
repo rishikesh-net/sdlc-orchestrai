@@ -260,9 +260,20 @@ def check_env(json_output: bool = False, strict: bool = False) -> int:
     # 8. Security Scanners (respecting .sdlc/config.yaml security.scanners)
     sec_cfg = config.get("security") if isinstance(config.get("security"), dict) else {}
     sec_scanners = sec_cfg.get("scanners") if isinstance(sec_cfg.get("scanners"), dict) else {}
+    is_win = sys.platform == "win32"
+    is_mac = sys.platform == "darwin"
+    install_cmd_map = {
+        "semgrep": "pip install semgrep",
+        "gitleaks": "winget install Gitleaks.Gitleaks" if is_win else ("brew install gitleaks" if is_mac else "https://github.com/gitleaks/gitleaks/releases"),
+        "trivy": "winget install AquaSecurity.Trivy" if is_win else ("brew install trivy" if is_mac else "https://trivy.dev/latest/getting-started/installation/"),
+        "osv-scanner": "winget install Google.OSVScanner" if is_win else ("brew install osv-scanner" if is_mac else "go install github.com/google/osv-scanner/v2/cmd/osv-scanner@latest"),
+        "zizmor": "pip install zizmor",
+    }
     sec_tools = []
     missing_sec_tools = []
+    required_missing = []
     disabled_sec_tools = []
+    missing_hints: Dict[str, str] = {}
     for tool_name, cfg_key, check_args in [
         ("semgrep", "semgrep", ["semgrep", "--version"]),
         ("gitleaks", "gitleaks", ["gitleaks", "version"]),
@@ -279,17 +290,27 @@ def check_env(json_output: bool = False, strict: bool = False) -> int:
             first_line = out.splitlines()[0] if out else tool_name
             sec_tools.append(f"{tool_name} ({first_line})")
         else:
-            missing_sec_tools.append(f"{tool_name} [REQUIRED]" if mode == "enabled" else tool_name)
+            missing_hints[tool_name] = install_cmd_map[tool_name]
+            if mode == "enabled":
+                required_missing.append(tool_name)
+                missing_sec_tools.append(f"{tool_name} [REQUIRED]")
+            else:
+                missing_sec_tools.append(tool_name)
 
-    if sec_tools:
+    sec_details = {"install_hints": missing_hints} if missing_hints else {}
+    if required_missing:
+        record("security_tools", "fail", f"Required scanner(s) missing or failed: {', '.join(required_missing)}", sec_details)
+    elif sec_tools:
         msg = f"Available: {', '.join(sec_tools)}"
         if missing_sec_tools:
             msg += f" (missing: {', '.join(missing_sec_tools)}; fallback/skip used)"
         if disabled_sec_tools:
             msg += f" (disabled: {', '.join(disabled_sec_tools)})"
-        record("security_tools", "ok", msg)
+        record("security_tools", "ok", msg, sec_details)
+    elif missing_sec_tools:
+        record("security_tools", "warn", f"None of the configured scanners found ({', '.join(missing_sec_tools)}); heuristic fallback will be used", sec_details)
     else:
-        record("security_tools", "warn", f"None of the configured scanners found ({', '.join(missing_sec_tools)}); heuristic fallback will be used")
+        record("security_tools", "ok", f"All security scanners disabled in .sdlc/config.yaml ({', '.join(disabled_sec_tools)})")
     record("sarif", "ok", f"SARIF 2.1.0 reports -> .sdlc/reports/<feature>-findings.sarif (run `{cli_prefix()} scan --feature <slug>`)")
 
     # Output Rendering
@@ -311,6 +332,10 @@ def check_env(json_output: bool = False, strict: bool = False) -> int:
     for r in results:
         sym = symbols.get(r["status"], "[?]")
         print(f" {sym} {r['name'].upper():<16} : {r['message']}")
+        if r["name"] == "security_tools" and r["details"].get("install_hints"):
+            print("     Install missing scanners (or set to 'disabled' in .sdlc/config.yaml):")
+            for tool_name, hint in r["details"]["install_hints"].items():
+                print(f"       - {tool_name:<12}: {hint}")
         if r["status"] == "fail":
             has_fail = True
         elif r["status"] == "warn":

@@ -60,6 +60,18 @@ CONFIG_YAML_LOCAL = """\
 tracker: local
 local:
   output_dir: docs/backlog/tickets
+
+security:
+  strict: false
+  scanners:
+    gitleaks: auto
+    trufflehog: auto
+    semgrep: auto
+    trivy: auto
+    osv_scanner: auto
+    zizmor: auto
+    dotnet: auto
+    npm_audit: auto
 """
 
 CONFIG_YAML_GITHUB = """\
@@ -68,6 +80,18 @@ github:
   repo: ""          # your-org/your-repo
   project_number: ""
   project_owner: ""
+
+security:
+  strict: false
+  scanners:
+    gitleaks: auto
+    trufflehog: auto
+    semgrep: auto
+    trivy: auto
+    osv_scanner: auto
+    zizmor: auto
+    dotnet: auto
+    npm_audit: auto
 """
 
 # ---------------------------------------------------------------------------
