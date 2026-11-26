@@ -3,9 +3,11 @@
 Run: python -m unittest discover -s scripts/tests -v
 """
 
+import io
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -69,6 +71,19 @@ class TestRunLocal(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertFalse(target.exists())
 
+    def test_dry_run_reports_no_files_written(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "out"
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = install.run(target=str(target), dry_run=True, remote=False)
+            out = buf.getvalue()
+            self.assertEqual(rc, 0)
+            self.assertFalse(target.exists())
+            self.assertIn("no files were written", out)
+            self.assertIn("would be copied", out)
+            self.assertIn("Re-run without --dry-run", out)
+
     def test_real_install_copies_core_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "out"
@@ -78,6 +93,18 @@ class TestRunLocal(unittest.TestCase):
             self.assertTrue((target / "scripts" / "sdlc.py").is_file())
             self.assertTrue((target / ".sdlc" / "config.yaml").is_file())
             self.assertIn("tracker: local", (target / ".sdlc" / "config.yaml").read_text(encoding="utf-8"))
+
+    def test_second_run_reports_nothing_copied(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "out"
+            install.run(target=str(target), dry_run=False, remote=False)
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = install.run(target=str(target), dry_run=False, remote=False)
+            out = buf.getvalue()
+            self.assertEqual(rc, 0)
+            self.assertIn("Nothing copied", out)
+            self.assertIn("--force", out)
 
 
 if __name__ == "__main__":

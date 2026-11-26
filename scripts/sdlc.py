@@ -1262,7 +1262,7 @@ def main():
     p_install = subparsers.add_parser("install", help="Copy SDLCOrchestrAI pack files into a target repository")
     p_install.add_argument("--target", "-t", default=os.getcwd(), help="Target repository directory (default: current directory)")
     p_install.add_argument("--tracker", choices=["local", "github"], default="local", help="Tracker mode for .sdlc/config.yaml (default: local)")
-    p_install.add_argument("--dry-run", "-n", action="store_true", help="Preview changes without copying")
+    p_install.add_argument("--dry-run", "-n", action="store_true", help="Preview only; writes nothing (re-run without --dry-run to install)")
     p_install.add_argument("--force", "-f", action="store_true", help="Overwrite existing files")
 
     # init

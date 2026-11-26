@@ -10,7 +10,7 @@ SDLCOrchestrAI gives AI coding agents a repeatable, gate-driven workflow tuned f
 
 ## Install (curl bootstrap)
 
-Run this from the root of the repository you want to add SDLCOrchestrAI to:
+Run this from the root of the repository you want to add SDLCOrchestrAI to. This **copies** the pack into the current directory and writes `.sdlc/config.yaml`:
 
 ```bash
 # macOS / Linux
@@ -20,7 +20,14 @@ curl -fsSL https://raw.githubusercontent.com/rishikesh-net/sdlc-orchestrai/main/
 Invoke-RestMethod https://raw.githubusercontent.com/rishikesh-net/sdlc-orchestrai/main/install.py | python -
 ```
 
-Pass flags after `python -` / `python`, e.g. `... | python3 - --dry-run` or `... | python3 - -t ../my-app --tracker github`.
+Preview first (optional) — `--dry-run` only lists what *would* be copied and **writes nothing**:
+
+```bash
+# Windows (PowerShell)
+Invoke-RestMethod https://raw.githubusercontent.com/rishikesh-net/sdlc-orchestrai/main/install.py | python - --dry-run
+```
+
+Pass flags after `python -` / `python`, e.g. `... | python3 - -t ../my-app --tracker github`. Use `--force` to overwrite files that already exist.
 Prefer copying files by hand? See [GETTING_STARTED.md](GETTING_STARTED.md).
 
 ---

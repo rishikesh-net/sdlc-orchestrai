@@ -100,18 +100,20 @@ def _copy_item(src: Path, dst: Path, is_dir: bool, force: bool, dry_run: bool) -
     return True
 
 
-def _write_config(target: Path, tracker: str, force: bool, dry_run: bool) -> None:
+def _write_config(target: Path, tracker: str, force: bool, dry_run: bool) -> bool:
+    """Write .sdlc/config.yaml. Returns True if written / would write, False if skipped."""
     cfg = target / ".sdlc" / "config.yaml"
     content = CONFIG_YAML_LOCAL if tracker == "local" else CONFIG_YAML_GITHUB
     if cfg.exists() and not force:
         print("  skipped  .sdlc/config.yaml  (already exists; use --force to overwrite)")
-        return
+        return False
     if dry_run:
         _print(f"  write    .sdlc/config.yaml  (tracker: {tracker})", dry_run=True)
-        return
+        return True
     cfg.parent.mkdir(parents=True, exist_ok=True)
     cfg.write_text(content, encoding="utf-8")
     print(f"  OK  .sdlc/config.yaml  (tracker: {tracker})")
+    return True
 
 
 def _post_install_checklist(target: Path) -> None:
@@ -141,21 +143,47 @@ def _post_install_checklist(target: Path) -> None:
 
 def _install_local(source: Path, target: Path, tracker: str, force: bool, dry_run: bool) -> int:
     print(f"\nInstalling from local source: {source}")
-    print(f"Target directory:             {target}\n")
+    print(f"Target directory:             {target}")
+    if dry_run:
+        print("DRY RUN - no files will be written (re-run without --dry-run to install).")
+    print()
     if not dry_run:
         target.mkdir(parents=True, exist_ok=True)
 
+    copied = 0
+    skipped = 0
+    missing = 0
     for src_rel, dst_rel, is_dir in PACK_ITEMS:
         src = source / src_rel
         dst = target / dst_rel
         if not src.exists():
             print(f"  missing  {src_rel}  (skipped)")
+            missing += 1
             continue
-        _copy_item(src, dst, is_dir, force, dry_run)
+        if _copy_item(src, dst, is_dir, force, dry_run):
+            copied += 1
+        else:
+            skipped += 1
 
-    _write_config(target, tracker, force, dry_run)
+    if _write_config(target, tracker, force, dry_run):
+        copied += 1
+    else:
+        skipped += 1
 
-    if not dry_run:
+    if dry_run:
+        print()
+        print(
+            f"Dry run complete - no files were written. "
+            f"{copied} item(s) would be copied, {skipped} skipped, {missing} missing."
+        )
+        print("Re-run without --dry-run to install.")
+    elif copied == 0:
+        print()
+        print(
+            "Nothing copied - all pack files already exist. "
+            "Use --force to overwrite or -t <dir> to target another folder."
+        )
+    else:
         _post_install_checklist(target)
     return 0
 
@@ -255,7 +283,7 @@ def main() -> int:
     parser.add_argument(
         "--dry-run", "-n",
         action="store_true",
-        help="Show what would be copied without making changes",
+        help="Preview only; writes nothing (re-run without --dry-run to install)",
     )
     parser.add_argument(
         "--force", "-f",

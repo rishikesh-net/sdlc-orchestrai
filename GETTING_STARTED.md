@@ -31,7 +31,7 @@ Invoke-RestMethod https://raw.githubusercontent.com/rishikesh-net/sdlc-orchestra
 ```
 
 This copies the pack and writes `.sdlc/config.yaml` for you — skip steps 1–2 below and continue at step 3.
-Use `--dry-run` to preview, `-t <dir>` to target another folder, and `--force` to overwrite existing files.
+Use `--dry-run` to preview only (it **copies nothing**), `-t <dir>` to target another folder, and `--force` to overwrite existing files. If a run reports "Nothing copied", the pack is already present in your target folder.
 
 **Option B — copy the pack files manually.**
 
