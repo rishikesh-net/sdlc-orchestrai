@@ -98,7 +98,7 @@ Edit only `skills/` and `AGENTS.md`. Running `python scripts/sdlc.py sync-skills
 
 - **Human gates between phases:** `python scripts/sdlc.py verify --gate <gate> --feature <slug>` validates `REQ-ID` uniqueness and cross-doc coverage before approval.
 - **Dry-run before side effects:** `push-backlog.sh` always requires `--dry-run` review before creating GitHub or local tickets.
-- **Security built in:** `.github/workflows/security.yml` auto-detects languages for CodeQL, runs `gitleaks` and dependency audits, and uploads SARIF artifacts.
+- **Security built in & configurable:** `.github/workflows/security.yml` auto-detects languages for CodeQL, runs `gitleaks`, `semgrep`, `zizmor`, `trivy` IaC scans, and dependency audits (`dotnet`, `npm`, `osv-scanner`), and uploads SARIF 2.1.0 artifacts. Every scanner is configurable (`auto` / `enabled` / `disabled`) in `.sdlc/config.yaml` under `security:`.
 - **Drift & state checks:** `.github/workflows/sync-check.yml` verifies skill generation, `state.json` schema validity, unit tests, and requirements packs.
 - **No secrets in docs or memory:** Reports cite `file:line` only.
 

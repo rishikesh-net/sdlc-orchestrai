@@ -14,7 +14,7 @@ Go from a fresh repository to your first feature flowing through requirements, s
 | **GitHub CLI (`gh`)** | *Optional* — only needed when pushing to GitHub Issues/PRs | `gh --version` |
 | **Git Bash / WSL** | *Windows only* — needed for `push-backlog.sh`, `req-index.sh`, `scan-*.sh` | `bash --version` |
 
-Optional security/stack tools: `gitleaks`, `semgrep`, `dotnet`, `npm` (missing tools are reported clearly by `check-env` and never block setup).
+Optional security/stack tools: `gitleaks`, `semgrep`, `trivy`, `osv-scanner`, `zizmor`, `dotnet`, `npm` (missing tools are reported clearly by `check-env` and never block setup; each scanner can be toggled in `.sdlc/config.yaml`).
 
 ---
 
@@ -55,6 +55,17 @@ Use `--dry-run` to preview only (it **copies nothing**), `-t <dir>` to target an
        project_owner: ""      # optional; defaults to repo owner
      ```
      *(If using `github`, authenticate once: `gh auth login`.)*
+   - **Configure security scanners (optional — defaults to `auto`):**
+     ```yaml
+     security:
+       strict: false
+       scanners:
+         gitleaks: auto      # auto | enabled | disabled
+         semgrep: auto
+         trivy: auto         # IaC / Dockerfile / config
+         osv_scanner: auto   # lockfile SCA (NuGet, npm, PyPI)
+         zizmor: auto        # GitHub Actions workflows
+     ```
 
 3. **Run the environment check and sync skills to your client:**
    ```bash
@@ -151,7 +162,7 @@ Try a small, real feature first. **Review each artifact before moving to the nex
 
 - **Large requirements (>40 REQs or >400 lines):** Use a vertical-slice pack (`docs/requirements/<feature>/`) with `skills/sdlc-requirements-analyzer/scripts/req-index.sh` (`analyze`, `skeleton`, `split --dry-run`, `split`, `show --slice`). See [splitting-existing-docs.md](skills/sdlc-requirements-analyzer/references/splitting-existing-docs.md).
 - **Switching AI clients mid-feature (opt-in):** Run `python scripts/sdlc.py checkpoint --client <name> --feature <slug> --phase <phase> --next "..."` and commit `.sdlc/`, then run `python scripts/sdlc.py resume` in the new client. See [state-protocol.md](skills/sdlc-session-handoff/references/state-protocol.md).
-- **CI enforcement:** Commit `.github/workflows/security.yml` and `.github/workflows/sync-check.yml`, and set your .NET/Node versions in `security.yml` if applicable.
+- **CI enforcement & security config:** Commit `.github/workflows/security.yml` and `.github/workflows/sync-check.yml`, set your .NET/Node versions in `security.yml` if applicable, and toggle scanners (`auto` | `enabled` | `disabled`) in `.sdlc/config.yaml` under `security:`. See [docs/design/security-tooling-expansion.md](docs/design/security-tooling-expansion.md) for the full roadmap (including Roslyn, ESLint SDL, Squawk, pytm, and ZAP).
 - **Customize for your team:** Edit `skills/sdlc-system-design/references/design-principles.md`, `skills/sdlc-security-review/references/`, and `AGENTS.md`, then re-run `python scripts/sdlc.py sync-skills`.
 
 ---

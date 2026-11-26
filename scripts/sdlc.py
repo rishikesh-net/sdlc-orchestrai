@@ -96,40 +96,34 @@ def run_cmd(args: List[str], cwd: Optional[Path] = None) -> Tuple[int, str, str]
 
 
 def parse_simple_yaml(path: Path) -> Dict[str, Any]:
-    """Lightweight YAML parser for simple key-value and 1-level nested maps without external PyYAML."""
+    """Lightweight YAML parser for key-value and nested maps without external PyYAML."""
     if not path.is_file():
         return {}
     data: Dict[str, Any] = {}
-    current_section: Optional[str] = None
+    stack: List[Tuple[int, Dict[str, Any]]] = [(-1, data)]
     try:
         with open(path, "r", encoding="utf-8") as f:
             for raw_line in f:
                 line = raw_line.strip()
-                if not line or line.startswith("#"):
+                if not line or line.startswith("#") or line.startswith("- "):
                     continue
-                # Strip inline comments
                 if " #" in line:
                     line = line.split(" #", 1)[0].strip()
-
-                if raw_line.startswith("  ") or raw_line.startswith("\t"):
-                    if ":" in line and current_section:
-                        k, v = line.split(":", 1)
-                        k = k.strip()
-                        v = v.strip().strip("\"'")
-                        if current_section not in data or not isinstance(data[current_section], dict):
-                            data[current_section] = {}
-                        data[current_section][k] = v
+                if ":" not in line:
+                    continue
+                indent = len(raw_line) - len(raw_line.lstrip(" \t"))
+                while len(stack) > 1 and indent <= stack[-1][0]:
+                    stack.pop()
+                k, v = line.split(":", 1)
+                k = k.strip()
+                v = v.strip().strip("\"'")
+                target = stack[-1][1]
+                if v == "":
+                    child: Dict[str, Any] = {}
+                    target[k] = child
+                    stack.append((indent, child))
                 else:
-                    if ":" in line:
-                        k, v = line.split(":", 1)
-                        k = k.strip()
-                        v = v.strip().strip("\"'")
-                        if v == "":
-                            current_section = k
-                            data[k] = {}
-                        else:
-                            current_section = None
-                            data[k] = v
+                    target[k] = v
         return data
     except Exception:
         return {}
@@ -263,28 +257,39 @@ def check_env(json_output: bool = False, strict: bool = False) -> int:
     else:
         record("node", "warn", "Node.js (`node`) not found in PATH")
 
-    # 8. Security Scanners
+    # 8. Security Scanners (respecting .sdlc/config.yaml security.scanners)
+    sec_cfg = config.get("security") if isinstance(config.get("security"), dict) else {}
+    sec_scanners = sec_cfg.get("scanners") if isinstance(sec_cfg.get("scanners"), dict) else {}
     sec_tools = []
     missing_sec_tools = []
-    for tool_name, check_args in [
-        ("semgrep", ["semgrep", "--version"]),
-        ("gitleaks", ["gitleaks", "version"]),
-        ("trivy", ["trivy", "--version"]),
+    disabled_sec_tools = []
+    for tool_name, cfg_key, check_args in [
+        ("semgrep", "semgrep", ["semgrep", "--version"]),
+        ("gitleaks", "gitleaks", ["gitleaks", "version"]),
+        ("trivy", "trivy", ["trivy", "--version"]),
+        ("osv-scanner", "osv_scanner", ["osv-scanner", "--version"]),
+        ("zizmor", "zizmor", ["zizmor", "--version"]),
     ]:
+        mode = str(sec_scanners.get(cfg_key, "auto")).lower()
+        if mode == "disabled":
+            disabled_sec_tools.append(tool_name)
+            continue
         code, out, _ = run_cmd(check_args)
         if code == 0:
             first_line = out.splitlines()[0] if out else tool_name
             sec_tools.append(f"{tool_name} ({first_line})")
         else:
-            missing_sec_tools.append(tool_name)
+            missing_sec_tools.append(f"{tool_name} [REQUIRED]" if mode == "enabled" else tool_name)
 
     if sec_tools:
         msg = f"Available: {', '.join(sec_tools)}"
         if missing_sec_tools:
-            msg += f" (optional missing: {', '.join(missing_sec_tools)}; heuristic fallback will be used)"
+            msg += f" (missing: {', '.join(missing_sec_tools)}; fallback/skip used)"
+        if disabled_sec_tools:
+            msg += f" (disabled: {', '.join(disabled_sec_tools)})"
         record("security_tools", "ok", msg)
     else:
-        record("security_tools", "warn", f"None of the recommended scanners found ({', '.join(missing_sec_tools)}); heuristic fallback will be used")
+        record("security_tools", "warn", f"None of the configured scanners found ({', '.join(missing_sec_tools)}); heuristic fallback will be used")
     record("sarif", "ok", f"SARIF 2.1.0 reports -> .sdlc/reports/<feature>-findings.sarif (run `{cli_prefix()} scan --feature <slug>`)")
 
     # Output Rendering

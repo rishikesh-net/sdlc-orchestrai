@@ -23,7 +23,10 @@ rm -f "$OUT/$SCAN_FEATURE-dotnet.json" "$OUT/$SCAN_FEATURE-dotnet.sarif" \
       "$OUT/$SCAN_FEATURE-npm-audit.json" "$OUT/$SCAN_FEATURE-npm-audit.sarif" 2>/dev/null || true
 
 dotnet_json_found=0
-if command -v dotnet >/dev/null 2>&1; then
+if [[ "$(scan_mode DOTNET)" == "disabled" ]]; then
+  echo "[deps] dotnet disabled in .sdlc/config.yaml"
+  scan_convert --type none --scanner dotnet --status skipped --message "disabled in .sdlc/config.yaml"
+elif command -v dotnet >/dev/null 2>&1; then
   targets=$(git -C "$ROOT" ls-files '*.sln' '*.slnx' 2>/dev/null)
   [[ -n "$targets" ]] || targets=$(git -C "$ROOT" ls-files '*.csproj' 2>/dev/null)
   if [[ -z "$targets" ]]; then
@@ -57,7 +60,10 @@ else
   scan_convert --type none --scanner dotnet --status skipped --message "dotnet SDK not installed"
 fi
 
-if command -v npm >/dev/null 2>&1; then
+if [[ "$(scan_mode NPM_AUDIT)" == "disabled" ]]; then
+  echo "[deps] npm-audit disabled in .sdlc/config.yaml"
+  scan_convert --type none --scanner npm-audit --status skipped --message "disabled in .sdlc/config.yaml"
+elif command -v npm >/dev/null 2>&1; then
   pkgs=$(git -C "$ROOT" ls-files '*package.json' 2>/dev/null | grep -v node_modules || true)
   if [[ -z "$pkgs" ]]; then
     echo "[deps] no package.json found"
@@ -88,4 +94,23 @@ else
   scan_convert --type none --scanner npm-audit --status skipped --message "npm not installed"
 fi
 
-scan_finish deps "dotnet npm-audit"
+OSV_RAW="$OUT/$SCAN_FEATURE-deps-osv.raw.sarif"
+rm -f "$OUT/$SCAN_FEATURE-osv-scanner.json" "$OUT/$SCAN_FEATURE-osv-scanner.sarif" "$OSV_RAW" 2>/dev/null || true
+if [[ "$(scan_mode OSV_SCANNER)" == "disabled" ]]; then
+  echo "[deps] osv-scanner disabled in .sdlc/config.yaml"
+  scan_convert --type none --scanner osv-scanner --status skipped --message "disabled in .sdlc/config.yaml"
+elif command -v osv-scanner >/dev/null 2>&1; then
+  echo "[deps] osv-scanner lockfile scan"
+  osv-scanner scan --recursive --format sarif --output "$OSV_RAW" "$ROOT" >/dev/null 2>&1 || true
+  if [[ -s "$OSV_RAW" ]]; then
+    scan_convert --type sarif --input "$OSV_RAW" --scanner osv-scanner --status ran --root "$ROOT" \
+      || scan_convert --type none --scanner osv-scanner --status skipped --message "osv-scanner SARIF output could not be parsed"
+  else
+    scan_convert --type none --scanner osv-scanner --status ran --message "no lockfile vulnerabilities reported"
+  fi
+else
+  echo "[deps] osv-scanner not installed - skipped lockfile SCA"
+  scan_convert --type none --scanner osv-scanner --status skipped --message "osv-scanner not installed"
+fi
+
+scan_finish deps "dotnet npm-audit osv-scanner"

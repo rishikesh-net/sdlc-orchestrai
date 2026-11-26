@@ -26,6 +26,7 @@ python scripts/sdlc.py scan --feature <slug>          # same via the cross-platf
 bash skills/sdlc-security-review/scripts/scan-secrets.sh --feature <slug>
 bash skills/sdlc-security-review/scripts/scan-sast.sh --feature <slug>
 bash skills/sdlc-security-review/scripts/scan-deps.sh --feature <slug>
+bash skills/sdlc-security-review/scripts/scan-iac.sh --feature <slug>
 
 # report helpers
 python skills/sdlc-security-review/scripts/sarif.py validate .sdlc/reports/<slug>-findings.sarif
@@ -40,8 +41,11 @@ invoked scanner has findings. `scan-all.sh` aggregates all scanners.
 | Scanner | Primary | Fallback |
 |---|---|---|
 | Secrets | gitleaks (redacted) | trufflehog (verified only) | labeled regex heuristics |
-| SAST | Semgrep (OWASP/C#/React/TS rules) | conservative heuristics on application source files only (`*.cs`, `*.cshtml`, `*.ts`, `*.tsx`, `*.js`, `*.jsx`, `*.mjs`, `*.cjs`, `*.py`, `*.go`, `*.java`, `*.kt`, `*.rb`, `*.php`, `*.sql`) |
-| Dependencies | `dotnet list package --vulnerable --format json`, `npm audit --json` | skipped with a recorded status |
+| SAST | Semgrep (OWASP/C#/React/TS rules) + zizmor (GitHub Actions) | conservative heuristics on application source files only (`*.cs`, `*.cshtml`, `*.ts`, `*.tsx`, `*.js`, `*.jsx`, `*.mjs`, `*.cjs`, `*.py`, `*.go`, `*.java`, `*.kt`, `*.rb`, `*.php`, `*.sql`) |
+| Dependencies | `dotnet list package --vulnerable --format json`, `npm audit --json`, `osv-scanner` (lockfile SCA) | skipped with a recorded status |
+| IaC / Config | Trivy (`trivy config --format sarif`) | skipped with a recorded status |
+
+All scanners can be configured in `.sdlc/config.yaml` under `security.scanners` (`auto` | `enabled` | `disabled`). Setting a scanner to `disabled` records `status: skipped` with `"disabled in .sdlc/config.yaml"`.
 
 The SQL-concatenation heuristic is case-sensitive (`\bSELECT\b...`) so tooling such as jq
 `select(...) +` (or shell string concatenation) is not reported. Secrets scanning still covers shell

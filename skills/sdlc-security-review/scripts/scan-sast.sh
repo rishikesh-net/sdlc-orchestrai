@@ -54,7 +54,10 @@ heuristic_sast() {
   scan_convert --type lines --input "$tsv" --scanner heuristic-sast --status fallback --root "$ROOT"
 }
 
-if command -v semgrep >/dev/null 2>&1; then
+if [[ "$(scan_mode SEMGREP)" == "disabled" ]]; then
+  echo "[sast] semgrep disabled in .sdlc/config.yaml"
+  scan_convert --type none --scanner semgrep --status skipped --message "disabled in .sdlc/config.yaml"
+elif command -v semgrep >/dev/null 2>&1; then
   echo "[sast] semgrep scan"
   semgrep scan --metrics=off --quiet \
     --config p/owasp-top-ten --config p/csharp --config p/react --config p/typescript --config p/secrets \
@@ -79,4 +82,25 @@ if [[ -s "$RAW" && -s "$OUT/$SCAN_FEATURE-semgrep.json" ]]; then
   echo "[sast] heuristic findings: $(scan_scanner_count heuristic-sast)"
 fi
 
-scan_finish sast "semgrep heuristic-sast"
+ZIZMOR_RAW="$OUT/$SCAN_FEATURE-sast-zizmor.raw.sarif"
+rm -f "$OUT/$SCAN_FEATURE-zizmor.json" "$OUT/$SCAN_FEATURE-zizmor.sarif" "$ZIZMOR_RAW" 2>/dev/null || true
+if [[ -d "$ROOT/.github/workflows" ]]; then
+  if [[ "$(scan_mode ZIZMOR)" == "disabled" ]]; then
+    echo "[sast] zizmor disabled in .sdlc/config.yaml"
+    scan_convert --type none --scanner zizmor --status skipped --message "disabled in .sdlc/config.yaml"
+  elif command -v zizmor >/dev/null 2>&1; then
+    echo "[sast] zizmor GitHub Actions scan"
+    zizmor --format sarif "$ROOT/.github/workflows" > "$ZIZMOR_RAW" 2>/dev/null || true
+    if [[ -s "$ZIZMOR_RAW" ]]; then
+      scan_convert --type sarif --input "$ZIZMOR_RAW" --scanner zizmor --status ran --root "$ROOT" \
+        || scan_convert --type none --scanner zizmor --status skipped --message "zizmor SARIF output could not be parsed"
+    else
+      scan_convert --type none --scanner zizmor --status ran --message "no workflow findings reported"
+    fi
+  else
+    echo "[sast] zizmor not installed - skipped GitHub Actions workflow check"
+    scan_convert --type none --scanner zizmor --status skipped --message "zizmor not installed"
+  fi
+fi
+
+scan_finish sast "semgrep heuristic-sast zizmor"

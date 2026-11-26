@@ -37,6 +37,31 @@ scan_find_python() {
 
 SCAN_PY="$(scan_find_python)"
 
+scan_load_config() {
+  [[ -n "$SCAN_PY" && -f "$SCAN_SARIF" ]] || return 0
+  local line k v
+  while IFS='=' read -r k v; do
+    case "$k" in
+      SDLC_CONFIG_STRICT)
+        if [[ -z "${SDLC_STRICT:-}" && "$v" == "1" ]]; then SCAN_STRICT=1; fi
+        ;;
+      SDLC_SEC_*)
+        if [[ "$v" == "auto" || "$v" == "enabled" || "$v" == "disabled" ]]; then
+          printf -v "$k" '%s' "$v"
+          export "$k"
+        fi
+        ;;
+    esac
+  done < <("$SCAN_PY" "$SCAN_SARIF" config --root "$SCAN_ROOT" --shell 2>/dev/null || true)
+}
+
+scan_mode() {
+  local var="SDLC_SEC_$1"
+  printf '%s' "${!var:-auto}"
+}
+
+scan_load_config
+
 scan_require_python() {
   [[ -n "$SCAN_PY" ]] || {
     echo "ERROR: Python 3 is required for SARIF reports (install Python or set SDLC_PYTHON)" >&2

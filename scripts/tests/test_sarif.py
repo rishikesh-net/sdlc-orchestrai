@@ -196,6 +196,48 @@ class CliTests(unittest.TestCase):
                 capture_output=True, text=True)
             self.assertEqual(valid.returncode, 0, valid.stdout + valid.stderr)
 
+    def test_from_sarif_and_config(self):
+        sample = {
+            "version": "2.1.0",
+            "runs": [{
+                "tool": {"driver": {"name": "trivy", "rules": [
+                    {"id": "DS002", "properties": {"security-severity": "8.0"}}
+                ]}},
+                "results": [{
+                    "ruleId": "DS002",
+                    "level": "error",
+                    "message": {"text": "Specify non-root USER"},
+                    "locations": [{"physicalLocation": {
+                        "artifactLocation": {"uri": "file:///repo/Dockerfile"},
+                        "region": {"startLine": 12},
+                    }}],
+                }],
+            }],
+        }
+        findings = sarif.from_sarif(sample, "trivy", Path("/repo"))
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["rule"], "trivy.DS002")
+        self.assertEqual(findings[0]["severity"], "high")
+        self.assertEqual(findings[0]["file"], "Dockerfile")
+        self.assertEqual(findings[0]["line"], 12)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg_path = Path(tmp) / "config.yaml"
+            cfg_path.write_text(
+                "tracker: local\n"
+                "security:\n"
+                "  strict: true\n"
+                "  scanners:\n"
+                "    trivy: disabled\n"
+                "    zizmor: enabled\n",
+                encoding="utf-8",
+            )
+            cfg = sarif.load_security_config(cfg_path)
+            self.assertTrue(cfg["strict"])
+            self.assertEqual(cfg["scanners"]["trivy"], "disabled")
+            self.assertEqual(cfg["scanners"]["zizmor"], "enabled")
+            self.assertEqual(cfg["scanners"]["semgrep"], "auto")
+
 
 if __name__ == "__main__":
     unittest.main()
