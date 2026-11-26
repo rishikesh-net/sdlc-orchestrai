@@ -51,6 +51,7 @@ class TestPackItems(unittest.TestCase):
             ".sdlc/schema",
             "scripts/sdlc.py",
             "scripts/sdlc_common.py",
+            "scripts/sdlc_graph.py",
             "scripts/sdlc.cmd",
             "scripts/sdlc.ps1",
             "scripts/sdlc",

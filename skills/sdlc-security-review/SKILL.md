@@ -81,7 +81,7 @@ Scope: <branch/PR/paths>   Date: <date>   Verdict: <Block | Fix before merge | M
 ## Shared memory (cross-client continuity)
 - Start of session: `python scripts/sdlc.py resume`. Reuse the codebase map to locate auth, data-access, and input-handling code instead of rescanning.
 - Mode A: record threats as graph entities (`--kind threat --attr severity=high`) and controls as tasks, with `T-001 mitigated_by <task-id>`. Checkpoint `--phase threat-model --gate threat-model=in-review --artifact docs/security/<slug>-threats.md`.
-- Mode B: record findings (`--kind finding --attr severity=high --attr status=open --attr location=path/File.cs:123`; never include secret values). After issues exist, add `SEC-001 tracked_by <task-id>`. Run `bash skills/sdlc-session-handoff/scripts/sdlc-graph.sh gaps` to list unmitigated high threats and untracked high findings before issuing a verdict.
+- Mode B: record findings (`--kind finding --attr severity=high --attr status=open --attr location=path/File.cs:123`; never include secret values). After issues exist, add `python scripts/sdlc.py graph add-relation --from SEC-001 --rel tracked_by --to <task-id>`. Run `python scripts/sdlc.py graph gaps` to list unmitigated high threats and untracked high findings before issuing a verdict.
 - Checkpoint `--phase security-review --gate security-review=in-review|approved --artifact docs/security/<name>-review.md --next "<verdict follow-up>"`.
 
 ## Large requirements (pack mode)

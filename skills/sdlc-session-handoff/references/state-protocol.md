@@ -26,7 +26,7 @@ A new client (or the same one tomorrow) runs `resume` and continues from `next_a
 
 ## Concurrency and merging
 - `graph.jsonl` is append-friendly and normalized (sorted, de-duplicated). `.gitattributes` uses `merge=union`;
-  after a merge run `sdlc-graph.sh normalize` and `validate`.
+  after a merge run `python scripts/sdlc.py graph normalize` and `python scripts/sdlc.py graph validate`.
 - `state.json` is JSON and cannot be union-merged. On a conflict, keep both features' entries, take the later
   `updated_at` for top-level fields, then run `python scripts/sdlc.py validate` and `render`.
 - `HANDOFF.md` is generated; on any conflict, regenerate it with `python scripts/sdlc.py render`.

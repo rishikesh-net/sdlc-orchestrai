@@ -114,7 +114,7 @@ Each phase is independently shippable and updates docs, tests, CI, and `install.
 
 **Exit criteria:** byte/semantically stable outputs; shadow parity; CI green; zero skips.
 
-### Phase 5 — Final sweep
+### Phase 5 — Final sweep (implemented)
 - Delete remaining `.sh` files; remove or reclassify `scripts/sdlc` (already vendored if kept).
 - Implement minimal Python `graph` and `backlog-to-graph` commands to replace the dead `sdlc-graph.sh` / `backlog-to-graph.sh` references; update the skills that mention them.
 - Update `install.py PACK_ITEMS` (add `scripts/sdlc_common.py`; drop deleted files).
@@ -159,14 +159,14 @@ Each phase is independently shippable and updates docs, tests, CI, and `install.
 
 ## 8. Deliverables checklist
 
-- [ ] CI matrix (ubuntu/windows/macos) + guard check
+- [x] CI matrix (ubuntu/windows/macos) + guard check
 - [x] `scripts/sdlc_common.py`
 - [x] `scan.py` + delete 6 scan `.sh`
 - [x] `backlog.py` + delete 5 backlog `.sh`; `jq` removed
 - [x] `req_index.py` + delete `req-index.sh`; shadow parity
 - [x] Delete remaining `.sh` files (Phases 2-4)
-- [ ] Minimal `graph` / `backlog-to-graph` Python commands
+- [x] Minimal `graph` / `backlog-to-graph` Python commands
 - [x] Templates renamed to `*.template.md`; examples moved to Markdown
 - [x] Launchers kept + `.gitattributes linguist-vendored`
-- [ ] Docs/CI/AGENTS/install.py updated
-- [ ] Zero skipped tests across OSes; language profile clean
+- [x] Docs/CI/AGENTS/install.py updated
+- [x] Zero skipped tests across OSes; language profile clean

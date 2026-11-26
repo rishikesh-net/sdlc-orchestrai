@@ -17,7 +17,7 @@ Example (later phases)::
     from _diff_harness import compare, normalize_json_text
 
     compare(
-        ["bash", "skills/sdlc-requirements-analyzer/scripts/req-index.sh",
+        ["python", "skills/sdlc-requirements-analyzer/scripts/req_index.py",
          "analyze", "--file", "docs/requirements/sample.md", "--json"],
         [sys.executable, "scripts/sdlc.py", "req", "analyze",
          "--file", "docs/requirements/sample.md", "--json"],

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """backlog.py - push/pull tracker tickets from a neutral backlog JSON.
 
-Python port of push-backlog.sh / pull-backlog.sh and the local/github adapters.
-Requires only Python 3.8+ and git (no jq). GitHub mode also needs an
-authenticated ``gh`` CLI.
+Python tracker adapter CLI (local + GitHub). Requires only Python 3.8+ and git
+(no jq). GitHub mode also needs an authenticated ``gh`` CLI.
 
 Usage:
     python backlog.py push --file docs/backlog/<feature>-backlog.json \

@@ -1294,6 +1294,28 @@ def cmd_req(req_args: List[str]) -> int:
     return module.main(list(req_args))
 
 
+def cmd_graph(graph_args: List[str]) -> int:
+    """Run the knowledge-graph CLI (sdlc_graph.py) in-process."""
+    graph_py = ROOT / "scripts" / "sdlc_graph.py"
+    if not graph_py.is_file():
+        print(f"ERROR: graph module not found: {graph_py}", file=sys.stderr)
+        return 1
+
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("sdlc_graph", graph_py)
+    if spec is None or spec.loader is None:
+        print(f"ERROR: could not load graph module: {graph_py}", file=sys.stderr)
+        return 1
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: could not load graph module: {exc}", file=sys.stderr)
+        return 1
+    return module.main(list(graph_args))
+
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -1340,6 +1362,13 @@ def main():
         help="Requirements packs: analyze/skeleton/split/build/validate/show/stale/to-graph",
     )
     p_req.add_argument("req_args", nargs=argparse.REMAINDER)
+
+    # graph (knowledge graph)
+    p_graph = subparsers.add_parser(
+        "graph",
+        help="Knowledge graph: add/import/normalize/validate/gaps/backlog-to-graph",
+    )
+    p_graph.add_argument("graph_args", nargs=argparse.REMAINDER)
 
     # story
     p_story = subparsers.add_parser("story", help="Manage story implementation lifecycle")
@@ -1428,6 +1457,8 @@ def main():
             sys.exit(1)
     elif args.subcommand == "req":
         sys.exit(cmd_req(args.req_args))
+    elif args.subcommand == "graph":
+        sys.exit(cmd_graph(args.graph_args))
     elif args.subcommand == "story":
         if args.story_action == "show":
             sys.exit(cmd_story_show(story_id=args.story_id, feature=args.feature, json_output=args.json))

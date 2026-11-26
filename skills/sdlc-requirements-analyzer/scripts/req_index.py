@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """req_index.py - requirements packs: split, build, and validate the index.
 
-Python port of req-index.sh (Python 3.8+, no jq/awk).
+Python requirements pack CLI (Python 3.8+, no jq/awk).
 
 Commands:
     analyze  --file F [--id-regex RE] [--json]

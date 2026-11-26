@@ -1,4 +1,5 @@
-# Union-merge the append-friendly graph; run `sdlc-graph.sh normalize` and `validate` after merging.
+# Union-merge the append-friendly graph; run `python scripts/sdlc.py graph normalize`
+# and `python scripts/sdlc.py graph validate` after merging.
 .sdlc/memory/graph.jsonl merge=union
 
 # Vendored launchers: keep them for Windows UX without skewing the language profile.

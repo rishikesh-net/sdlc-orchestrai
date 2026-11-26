@@ -74,7 +74,7 @@ Never rewrite requirement wording during a split. The script copies lines verbat
 - Mode A: when the draft is ready, `python scripts/sdlc.py checkpoint --client <your-client> --feature <slug> --phase requirements --gate requirements=in-review --artifact docs/requirements/<slug>.md --next "Human review of requirements"`; after approval set `approved` and `--phase design`.
 - Mode B/C: approve **per slice**. For each slice: `python scripts/sdlc.py checkpoint --client <your-client> --feature <slug> --phase requirements --slice <slice-slug> --gate requirements=approved --artifact docs/requirements/<slug>/slices/<NN-slice>.md --next "..."`.
   This records the slice's content hash; later `resume` and `python scripts/sdlc.py req stale --feature <slug>` flag any slice edited after approval so its design and backlog get re-reviewed.
-- Record requirements in the graph: Mode A: `sdlc-graph.sh add-entity --id REQ-001 --kind requirement --source <file>`. Mode B/C: `python scripts/sdlc.py req to-graph --feature <slug> --apply` (creates slice and requirement entities and `part_of` links).
+- Record requirements in the graph: Mode A: `python scripts/sdlc.py graph add-entity --id REQ-001 --kind requirement --source <file>`. Mode B/C: `python scripts/sdlc.py req to-graph --feature <slug> --apply` (creates slice and requirement entities and `part_of` links).
 - When all slices are approved: checkpoint `--phase design --next "Run sdlc-system-design, one slice at a time"`.
 - Requirements authoring stays sequential (boundaries and IDs must stay consistent). Once slices are approved, the lead may fan out downstream
   design, threat-model, or backlog work: `python scripts/sdlc.py slices plan --feature <slug> --stage design` and `sdlc slices check`. Subagents

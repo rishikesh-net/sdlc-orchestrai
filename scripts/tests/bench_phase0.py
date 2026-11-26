@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
-"""Phase 0 benchmark baseline for the shell -> Python migration.
+"""Benchmark baseline for the single-runtime Python pack.
 
-This is a manual tool (not a unittest). It records baseline timings for the two
-hot paths that later phases rewrite, so regressions are obvious:
+This is a manual tool (not a unittest). It records timings for the two hot paths
+so regressions are obvious:
 
-* ``req-index.sh analyze`` on a synthetic large requirements document.
-* ``sarif.py convert`` + ``merge`` over a synthetic batch of scanner findings
-  (the Python side of the scanning pipeline).
+* ``req_index.py analyze`` on a synthetic large requirements document.
+* ``sarif.py convert`` + ``merge`` over a synthetic batch of scanner findings.
 
 Usage:
     python scripts/tests/bench_phase0.py [--runs N] [--req-lines N] [--findings N]
-
-The ``req`` benchmark is skipped on Windows and when bash/jq are unavailable. The
-``scan`` benchmark is expected to carry over to the Phase 2 ``scan.py`` port.
 """
 
 import argparse
 import json
 import os
-import shutil
 import statistics
 import subprocess
 import sys
@@ -27,7 +22,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-REQ_INDEX = ROOT / "skills" / "sdlc-requirements-analyzer" / "scripts" / "req-index.sh"
+REQ_INDEX = ROOT / "skills" / "sdlc-requirements-analyzer" / "scripts" / "req_index.py"
 SARIF_PY = ROOT / "skills" / "sdlc-security-review" / "scripts" / "sarif.py"
 
 
@@ -71,13 +66,11 @@ def _make_big_doc(tmp: Path, target_lines: int) -> Path:
 
 
 def bench_req(tmp: Path, runs: int, target_lines: int) -> None:
-    if os.name == "nt" or shutil.which("bash") is None or shutil.which("jq") is None:
-        print("[req] skipped (POSIX bash + jq required)")
-        return
     _make_big_doc(tmp, target_lines)
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
-    cmd = ["bash", str(REQ_INDEX), "analyze", "--file", "docs/requirements/big.md", "--json"]
+    cmd = [sys.executable, str(REQ_INDEX), "analyze",
+           "--file", "docs/requirements/big.md", "--json"]
 
     def run():
         proc = subprocess.run(cmd, cwd=str(tmp), capture_output=True, text=True, env=env)
