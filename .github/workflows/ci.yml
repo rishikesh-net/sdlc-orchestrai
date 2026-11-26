@@ -1,8 +1,8 @@
 name: ci
 
 # Cross-platform guardrail for the single-runtime migration.
-# Phase 0 goal: prove the same Python test suite runs (or explicitly skips) on
-# Windows, macOS, and Linux before bash/jq scripts are ported to Python.
+# Phase 0 goal: prove the same Python test suite runs on Windows, macOS, and Linux.
+# After Phase 4 there are no runtime shell scripts in the pack (launchers are optional).
 on:
   push:
     branches: [main]

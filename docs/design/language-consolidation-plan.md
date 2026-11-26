@@ -105,7 +105,7 @@ Each phase is independently shippable and updates docs, tests, CI, and `install.
 
 **Exit criteria:** push/pull work on all OSes without bash/jq; all backlog tests run on Windows.
 
-### Phase 4 — Requirements index -> `req_index.py` (highest risk)
+### Phase 4 — Requirements index -> `req_index.py` (highest risk) (implemented)
 - Port `analyze`, `skeleton`, `split` (+`--dry-run`), `build`, `validate`, `show`, `stale`, `to-graph`, `init-pack`, `new-slice`.
 - Replace awk/jq with Python frontmatter parsing, ID regex, line ranges, hashing, JSON, coverage checks; preserve `_source/`, `_split-report.md`, `index.json`, and content hashes.
 - Land Phase 0 golden tests first; run `SDLC_IMPL=shadow` against `req-index.sh` on fixtures until normalized outputs match, then flip default to Python.
@@ -163,8 +163,8 @@ Each phase is independently shippable and updates docs, tests, CI, and `install.
 - [x] `scripts/sdlc_common.py`
 - [x] `scan.py` + delete 6 scan `.sh`
 - [x] `backlog.py` + delete 5 backlog `.sh`; `jq` removed
-- [ ] `req_index.py` + delete `req-index.sh`; shadow parity
-- [ ] Delete remaining `.sh` files (Phases 2-4)
+- [x] `req_index.py` + delete `req-index.sh`; shadow parity
+- [x] Delete remaining `.sh` files (Phases 2-4)
 - [ ] Minimal `graph` / `backlog-to-graph` Python commands
 - [x] Templates renamed to `*.template.md`; examples moved to Markdown
 - [x] Launchers kept + `.gitattributes linguist-vendored`

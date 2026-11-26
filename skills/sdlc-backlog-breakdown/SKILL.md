@@ -65,7 +65,7 @@ tracker adapter (`github` or `local`; see `references/tracker-adapters.md`).
 
 ## Large requirements (pack mode)
 When requirements are a pack, break down **one slice at a time** so each backlog file stays reviewable:
-1. Read `00-index.md`, then the slice (`bash skills/sdlc-requirements-analyzer/scripts/req-index.sh show --feature <feature> --slice <slice>`) and its design section `docs/design/<feature>/<slice>.md`.
+1. Read `00-index.md`, then the slice (`python scripts/sdlc.py req show --feature <feature> --slice <slice>`) and its design section `docs/design/<feature>/<slice>.md`.
 2. One epic per slice. Use slice-prefixed IDs so files never collide: `E-<PREFIX>`, `E-<PREFIX>-S1`, `E-<PREFIX>-T1`, `E-<PREFIX>-SP1`.
 3. Write `docs/backlog/<feature>/<slice>-backlog.json` (and a matching `.md`). Each item's `req_refs` lists the slice's REQ-IDs; add cross-slice `depends_on` only for real prerequisites.
 4. Coverage: every REQ-ID of the slice appears in at least one item. Check with `bash skills/sdlc-session-handoff/scripts/backlog-to-graph.sh --file <file> --apply` then `sdlc-graph.sh gaps`.

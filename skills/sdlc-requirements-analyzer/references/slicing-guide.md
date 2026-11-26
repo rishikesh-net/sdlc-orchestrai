@@ -1,7 +1,7 @@
 # Slicing guide
 
 ## When to use a pack
-Use a single file up to about 40 requirements or 400 lines. Above that, use a pack. `req-index.sh analyze` applies these thresholds
+Use a single file up to about 40 requirements or 400 lines. Above that, use a pack. `python scripts/sdlc.py req analyze` applies these thresholds
 (also: about 6000 tokens). Small features stay simple with global IDs (`REQ-001`); packs use slice-prefixed IDs (`REQ-PREF-001`).
 
 ## What a slice is
@@ -39,5 +39,5 @@ Declare `depends_on: other-slice` in front matter only for real prerequisites (s
 Order slices so dependencies come first. Keep the graph shallow; a long chain means the slicing is off.
 
 ## Review and approval
-Review and approve per slice. A slice edited after approval is flagged stale by `req-index.sh stale` and by `python scripts/sdlc.py resume`.
+Review and approve per slice. A slice edited after approval is flagged stale by `python scripts/sdlc.py req stale` and by `python scripts/sdlc.py resume`.
 Use the status values draft, in-review, approved in front matter, and checkpoint with `--slice <slug>`.

@@ -234,7 +234,8 @@ class LocalAdapter:
         content = "\n".join(lines) + "\n" + body
 
         tmp = target.with_name(target.name + ".tmp")
-        tmp.write_text(content, encoding="utf-8")
+        with open(tmp, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(content)
         os.replace(tmp, target)
 
     def create(self, item: Dict[str, Any], title: str, bodyfile: Path, labels: str) -> Tuple[str, str]:

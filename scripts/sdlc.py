@@ -1272,6 +1272,28 @@ def cmd_backlog(action: str, **kwargs) -> int:
     return module.main(argv)
 
 
+def cmd_req(req_args: List[str]) -> int:
+    """Run the requirements pack CLI (req_index.py) in-process."""
+    req_py = ROOT / "skills" / "sdlc-requirements-analyzer" / "scripts" / "req_index.py"
+    if not req_py.is_file():
+        print(f"ERROR: requirements module not found: {req_py}", file=sys.stderr)
+        return 1
+
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("sdlc_req", req_py)
+    if spec is None or spec.loader is None:
+        print(f"ERROR: could not load requirements module: {req_py}", file=sys.stderr)
+        return 1
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: could not load requirements module: {exc}", file=sys.stderr)
+        return 1
+    return module.main(list(req_args))
+
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -1311,6 +1333,13 @@ def main():
     p_bl_pull.add_argument("--label", default="", help="Filter by label")
     p_bl_pull.add_argument("--limit", default="200", help="Maximum rows (default: 200)")
     p_bl_pull.add_argument("--tracker", default=None, help="Tracker override (github|local)")
+
+    # req (requirements packs)
+    p_req = subparsers.add_parser(
+        "req",
+        help="Requirements packs: analyze/skeleton/split/build/validate/show/stale/to-graph",
+    )
+    p_req.add_argument("req_args", nargs=argparse.REMAINDER)
 
     # story
     p_story = subparsers.add_parser("story", help="Manage story implementation lifecycle")
@@ -1397,6 +1426,8 @@ def main():
         else:
             p_backlog.print_help()
             sys.exit(1)
+    elif args.subcommand == "req":
+        sys.exit(cmd_req(args.req_args))
     elif args.subcommand == "story":
         if args.story_action == "show":
             sys.exit(cmd_story_show(story_id=args.story_id, feature=args.feature, json_output=args.json))

@@ -29,5 +29,5 @@ jobs:
           shopt -s nullglob
           for pack in docs/requirements/*/pack.json; do
             feature="$(basename "$(dirname "$pack")")"
-            bash skills/sdlc-requirements-analyzer/scripts/req-index.sh validate --feature "$feature"
+            python scripts/sdlc.py req validate --feature "$feature"
           done

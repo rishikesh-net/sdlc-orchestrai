@@ -1,10 +1,7 @@
-"""Contract tests for skills/sdlc-requirements-analyzer/scripts/req-index.sh.
+"""Contract tests for the requirements pack CLI (req_index.py).
 
-These are the golden/behavioral baselines for the Phase 4 Python port. They assert
-the public command outputs and file layout, not internal shell details.
-
-POSIX/CI only: the script requires bash + jq + awk + git. Skipped on Windows until
-the Python port lands (Phase 4).
+Behavioral baselines for analyze, skeleton, split, build, validate, show, stale,
+init-pack, and new-slice. Runs on Windows, macOS, and Linux (git only).
 
 Run: python -m unittest discover -s scripts/tests -v
 """
@@ -19,7 +16,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "skills" / "sdlc-requirements-analyzer" / "scripts" / "req-index.sh"
+SCRIPT = ROOT / "skills" / "sdlc-requirements-analyzer" / "scripts" / "req_index.py"
+SDLC_PY = ROOT / "scripts" / "sdlc.py"
 
 SAMPLE_REQUIREMENTS = """\
 # Sample Requirements
@@ -50,17 +48,7 @@ NFR-SEC-002 Preference changes shall be recorded in the audit log.
 """
 
 
-def _posix_tools_available() -> bool:
-    return (
-        os.name != "nt"
-        and shutil.which("bash") is not None
-        and shutil.which("jq") is not None
-        and shutil.which("git") is not None
-    )
-
-
-@unittest.skipIf(os.name == "nt", "req-index.sh requires POSIX bash paths until Phase 4")
-@unittest.skipIf(not _posix_tools_available(), "bash, jq, and git are required")
+@unittest.skipIf(shutil.which("git") is None, "git is required")
 class ReqIndexContractTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="sdlc-req-"))
@@ -76,13 +64,11 @@ class ReqIndexContractTests(unittest.TestCase):
     def run_req(self, *args, expect: int = 0):
         env = os.environ.copy()
         env.pop("SDLC_REQ_DIR", None)
+        env.pop("SDLC_REQ_ROOT", None)
         env["PYTHONIOENCODING"] = "utf-8"
         proc = subprocess.run(
-            ["bash", str(SCRIPT), *args],
-            cwd=str(self.tmp),
-            capture_output=True,
-            text=True,
-            env=env,
+            [sys.executable, str(SCRIPT), *args],
+            cwd=str(self.tmp), capture_output=True, text=True, env=env,
         )
         self.assertEqual(proc.returncode, expect, proc.stdout + proc.stderr)
         return proc
@@ -112,7 +98,6 @@ class ReqIndexContractTests(unittest.TestCase):
         self.assertEqual(len(plan_data["slices"]), 1)
         self.assertEqual(plan_data["slices"][0]["slug"], "notifications")
 
-        # Dry-run must prove full coverage and write nothing.
         proc = self.run_req("split", "--plan", plan, "--dry-run")
         self.assertIn("Unassigned non-blank lines: 0", proc.stdout)
         self.assertIn("Dry run complete. Nothing written.", proc.stdout)
@@ -120,11 +105,9 @@ class ReqIndexContractTests(unittest.TestCase):
 
         self.run_req("split", "--plan", plan)
         pack = self.tmp / "docs" / "requirements" / "demo"
-        for rel in [
-            "00-index.md", "pack.json", "nfr.md", "glossary.md",
-            "index.json", "_split-report.md", "slices/01-notifications.md",
-        ]:
-            self.assertTrue((pack / rel).is_file(), rel)
+        for rel_path in ["00-index.md", "pack.json", "nfr.md", "glossary.md",
+                         "index.json", "_split-report.md", "slices/01-notifications.md"]:
+            self.assertTrue((pack / rel_path).is_file(), rel_path)
 
         index = json.loads((pack / "index.json").read_text(encoding="utf-8"))
         self.assertEqual(index["feature"], "demo")
@@ -152,13 +135,11 @@ class ReqIndexContractTests(unittest.TestCase):
     def test_init_pack_and_new_slice(self):
         self.run_req("init-pack", "--feature", "fresh", "--title", "Fresh Feature")
         pack = self.tmp / "docs" / "requirements" / "fresh"
-        for rel in ["00-index.md", "pack.json", "nfr.md", "glossary.md", "index.json"]:
-            self.assertTrue((pack / rel).is_file(), rel)
+        for rel_path in ["00-index.md", "pack.json", "nfr.md", "glossary.md", "index.json"]:
+            self.assertTrue((pack / rel_path).is_file(), rel_path)
 
-        self.run_req(
-            "new-slice", "--feature", "fresh", "--slug", "core",
-            "--title", "Core", "--prefix", "CORE",
-        )
+        self.run_req("new-slice", "--feature", "fresh", "--slug", "core",
+                     "--title", "Core", "--prefix", "CORE")
         slice_path = pack / "slices" / "01-core.md"
         self.assertTrue(slice_path.is_file())
         text = slice_path.read_text(encoding="utf-8")
@@ -172,18 +153,42 @@ class ReqIndexContractTests(unittest.TestCase):
 
     def test_validate_reports_unknown_dependency(self):
         self.run_req("init-pack", "--feature", "bad", "--title", "Bad")
-        self.run_req(
-            "new-slice", "--feature", "bad", "--slug", "core",
-            "--title", "Core", "--prefix", "CORE",
-        )
+        self.run_req("new-slice", "--feature", "bad", "--slug", "core",
+                     "--title", "Core", "--prefix", "CORE")
         slice_path = self.tmp / "docs" / "requirements" / "bad" / "slices" / "01-core.md"
         text = slice_path.read_text(encoding="utf-8")
-        slice_path.write_text(
-            text.replace("depends_on: \n", "depends_on: missing\n", 1),
-            encoding="utf-8",
-        )
+        slice_path.write_text(text.replace("depends_on: \n", "depends_on: missing\n", 1),
+                              encoding="utf-8")
         proc = self.run_req("validate", "--feature", "bad", expect=1)
-        self.assertIn("depends_on unknown slice 'missing'", proc.stderr)
+        self.assertIn("depends_on unknown slice 'missing'", proc.stdout + proc.stderr)
+
+
+@unittest.skipIf(shutil.which("git") is None, "git is required")
+class ReqIndexCliDelegationTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sdlc-req-cli-"))
+        (self.tmp / "docs" / "requirements").mkdir(parents=True)
+        (self.tmp / "docs" / "requirements" / "sample.md").write_text(
+            SAMPLE_REQUIREMENTS, encoding="utf-8")
+        subprocess.run(["git", "init", "-q", str(self.tmp)], check=True)
+        subprocess.run(["git", "-C", str(self.tmp), "add", "-A"], check=True)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_sdlc_req_analyze_delegates(self):
+        env = os.environ.copy()
+        env["SDLC_REQ_ROOT"] = str(self.tmp)
+        for key in ("SDLC_REQ_DIR",):
+            env.pop(key, None)
+        proc = subprocess.run(
+            [sys.executable, str(SDLC_PY), "req", "analyze",
+             "--file", "docs/requirements/sample.md", "--json"],
+            cwd=str(ROOT), capture_output=True, text=True, env=env,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        data = json.loads(proc.stdout)
+        self.assertEqual(data["ids"]["distinct"], 4)
 
 
 if __name__ == "__main__":

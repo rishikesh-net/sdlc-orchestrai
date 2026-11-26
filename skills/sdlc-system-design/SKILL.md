@@ -49,12 +49,12 @@ Default stack: ASP.NET Core API, EF Core + Npgsql, PostgreSQL, React. Read
 ## Large requirements (pack mode)
 If the requirements are a pack (`docs/requirements/<feature>/` with `00-index.md`, `slices/`, `nfr.md`) instead of a single file:
 1. Read `00-index.md` and `nfr.md` first. Do **not** load every slice.
-2. Design **one slice at a time**. Load it with `bash skills/sdlc-requirements-analyzer/scripts/req-index.sh show --feature <feature> --slice <slice>` (or one requirement with `--id <REQ-ID>`).
+2. Design **one slice at a time**. Load it with `python scripts/sdlc.py req show --feature <feature> --slice <slice>` (or one requirement with `--id <REQ-ID>`).
    Respect `depends_on`: design prerequisite slices first.
 3. Write a design overview `docs/design/<feature>/00-overview.md` (architecture, shared components, data ownership, cross-cutting NFR treatment)
    and one section file per slice `docs/design/<feature>/<slice>.md`. Every requirement ID in the slice maps to a design section (coverage matrix per slice).
 4. Gate per slice: `python scripts/sdlc.py checkpoint --client <your-client> --feature <feature> --phase design --slice <slice> --gate design=in-review --artifact docs/design/<feature>/<slice>.md`.
-   Run `bash skills/sdlc-requirements-analyzer/scripts/req-index.sh stale --feature <feature>`: if a slice changed after approval, re-review its design before continuing.
+   Run `python scripts/sdlc.py req stale --feature <feature>`: if a slice changed after approval, re-review its design before continuing.
 5. Record slice-to-design links in the graph (`DS-<slice> covers REQ-...`).
 6. Optional parallel design: after `00-overview.md` exists and slices are approved, the lead can run
    `python scripts/sdlc.py slices plan --feature <feature> --stage design`, dispatch one agent per work order,

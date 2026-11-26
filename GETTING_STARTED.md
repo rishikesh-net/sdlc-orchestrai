@@ -12,7 +12,6 @@ Go from a fresh repository to your first feature flowing through requirements, s
 | **Git** | Branches and version control | `git --version` |
 | **An AI client** | Claude Code, Copilot, Cursor, OpenCode, or Antigravity | — |
 | **GitHub CLI (`gh`)** | *Optional* — only needed when pushing to GitHub Issues/PRs | `gh --version` |
-| **Git Bash / WSL** | *Windows only* — needed for `req-index.sh` until its Python port lands | `bash --version` |
 
 Optional security/stack tools: `gitleaks`, `semgrep`, `trivy`, `osv-scanner`, `zizmor`, `dotnet`, `npm` (missing tools are reported clearly by `check-env` and never block setup; each scanner can be toggled in `.sdlc/config.yaml`).
 
@@ -160,7 +159,7 @@ Try a small, real feature first. **Review each artifact before moving to the nex
 
 ## 5. Advanced Workflows (When You Need Them)
 
-- **Large requirements (>40 REQs or >400 lines):** Use a vertical-slice pack (`docs/requirements/<feature>/`) with `skills/sdlc-requirements-analyzer/scripts/req-index.sh` (`analyze`, `skeleton`, `split --dry-run`, `split`, `show --slice`). See [splitting-existing-docs.md](skills/sdlc-requirements-analyzer/references/splitting-existing-docs.md).
+   - **Large requirements (>40 REQs or >400 lines):** Use a vertical-slice pack (`docs/requirements/<feature>/`) with `python scripts/sdlc.py req` (`analyze`, `skeleton`, `split --dry-run`, `split`, `show --slice`). See [splitting-existing-docs.md](skills/sdlc-requirements-analyzer/references/splitting-existing-docs.md).
 - **Switching AI clients mid-feature (opt-in):** Run `python scripts/sdlc.py checkpoint --client <name> --feature <slug> --phase <phase> --next "..."` and commit `.sdlc/`, then run `python scripts/sdlc.py resume` in the new client. See [state-protocol.md](skills/sdlc-session-handoff/references/state-protocol.md).
 - **CI enforcement & security config:** Commit `.github/workflows/security.yml` and `.github/workflows/sync-check.yml`, set your .NET/Node versions in `security.yml` if applicable, and toggle scanners (`auto` | `enabled` | `disabled`) in `.sdlc/config.yaml` under `security:`. See [docs/design/security-tooling-expansion.md](docs/design/security-tooling-expansion.md) for the full roadmap (including Roslyn, ESLint SDL, Squawk, pytm, and ZAP).
 - **Customize for your team:** Edit `skills/sdlc-system-design/references/design-principles.md`, `skills/sdlc-security-review/references/`, and `AGENTS.md`, then re-run `python scripts/sdlc.py sync-skills`.
@@ -175,6 +174,4 @@ Try a small, real feature first. **Review each artifact before moving to the nex
 | Antigravity wrapper reads `.agents/` | Run `SDLC_SYNC_EXTRA=".agents/skills" python scripts/sdlc.py sync-skills` |
 | `python` fails on Windows Store alias | Run via `scripts/sdlc.cmd <cmd>` (auto-detects installed Python) |
 | `gh CLI not installed or not authenticated` | Use `tracker: local` for offline tickets, or install `gh` and run `gh auth login` |
-| `jq is required` (req-index.sh until Phase 4) | Install `jq` (`winget install jqlang.jq`, `brew install jq`, `apt install jq`) |
-| Windows `.sh` script errors | Run `.sh` scripts from Git Bash or WSL, not PowerShell/CMD |
 | Duplicate skills in OpenCode | Remove `.opencode/skills` from `scripts/sdlc.py` `sync-skills` targets (OpenCode also reads `.claude/skills/`) |

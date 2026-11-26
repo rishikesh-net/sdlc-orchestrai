@@ -14,11 +14,11 @@ survived, and put the result in `docs/requirements/_incoming/`. Do not split a f
 
 ## Procedure
 1. **Analyze**
-   `bash skills/sdlc-requirements-analyzer/scripts/req-index.sh analyze --file docs/requirements/_incoming/big.md`
+   `python scripts/sdlc.py req analyze --file docs/requirements/_incoming/big.md`
    Read the recommendation, ID prefixes, duplicate-definition warnings, and the outline. If IDs are not detected (different style), pass
    `--id-regex '<ERE>'` (extended regex, no backslashes, for example `(R|FR)-[0-9]+`).
 2. **Draft a plan**
-   `req-index.sh skeleton --file <doc> --feature <slug> --title "<Title>" --out docs/requirements/<slug>.split-plan.json`
+   `python scripts/sdlc.py req skeleton --file <doc> --feature <slug> --title "<Title>" --out docs/requirements/<slug>.split-plan.json`
    (use `--level N` to slice at a different heading level; add `--id-policy renumber` if wanted).
 3. **Refine the plan.** Open the JSON and decide:
    - `slices[]`: one per capability. Merge tiny sections, split huge ones (several `ranges` per slice are allowed). Set `title`, `summary`, `priority`, `depends_on`, and a unique `prefix`.
@@ -27,17 +27,17 @@ survived, and put the result in `docs/requirements/_incoming/`. Do not split a f
    - `id_policy`: `keep` (legacy IDs stay; best when tickets or other documents cite them) or `renumber` (slice-prefixed, uniform).
    Ranges are inclusive 1-based line numbers from `analyze`'s outline.
 4. **Get the plan approved** by a human before writing anything.
-5. **Dry-run**: `req-index.sh split --plan <plan> --dry-run`. Required: `Unassigned non-blank lines: 0`. If lines are unassigned, assign or skip them.
+5. **Dry-run**: `python scripts/sdlc.py req split --plan <plan> --dry-run`. Required: `Unassigned non-blank lines: 0`. If lines are unassigned, assign or skip them.
    Use `--allow-unassigned` only to park leftovers in `_unassigned.md` for manual placement.
-6. **Split**: `req-index.sh split --plan <plan>`. Refuses to overwrite an existing pack unless `--force`.
+6. **Split**: `python scripts/sdlc.py req split --plan <plan>`. Refuses to overwrite an existing pack unless `--force`.
 7. **Review the report** (`_split-report.md`):
    - dangling references such as "see section 3.2" or "see above": rewrite them as links or requirement IDs
    - ID conflicts (the same legacy ID defined in two places)
    - slices that cannot be understood alone: add the missing context from the glossary or overview
 8. **Finish**: fill `summary`, `priority`, `depends_on`, `owner` in each slice's front matter; then
-   `req-index.sh build --feature <slug>` and `req-index.sh validate --feature <slug>`.
+   `python scripts/sdlc.py req build --feature <slug>` and `python scripts/sdlc.py req validate --feature <slug>`.
 9. **Approve per slice** with `python scripts/sdlc.py checkpoint --slice <slice> --gate requirements=approved ...`, load the graph with
-   `req-index.sh to-graph --feature <slug> --apply`, and commit the pack. Keep `_source/` until everyone agrees the pack is complete.
+   `python scripts/sdlc.py req to-graph --feature <slug> --apply`, and commit the pack. Keep `_source/` until everyone agrees the pack is complete.
 
 ## Plan format
 See `templates/split-plan.example.json`. Fields: `feature`, `title`, `source`, `id_policy` (keep | renumber), optional `id_regex`,
@@ -57,4 +57,4 @@ See `templates/split-plan.example.json`. Fields: `feature`, `title`, `source`, `
 
 ## After the split
 Downstream skills (`sdlc-system-design`, `sdlc-backlog-breakdown`, `sdlc-security-review`) read `00-index.md` and one slice at a time, using
-`req-index.sh show --feature <slug> --slice <slug>` or `--id <REQ-ID>`. Do not paste the whole pack into context.
+`python scripts/sdlc.py req show --feature <slug> --slice <slug>` or `--id <REQ-ID>`. Do not paste the whole pack into context.
